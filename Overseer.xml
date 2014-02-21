@@ -1,0 +1,32 @@
+﻿<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<Include file="libs.xml"/>
+
+	<Script file="core\Init.lua"/>
+	<Script file="core\Util.lua"/>
+	<Script file="core\Constants.lua"/>
+	<Script file="core\Database.lua"/>
+	<Script file="core\SavedState.lua"/>
+	<Script file="core\Overseer.lua"/>
+	
+	<Script file="core\CooldownData.lua"/>
+	<Script file="core\Cooldown.lua"/>
+	<Script file="core\CooldownTracking.lua"/>
+	<Script file="core\GroupCache.lua"/>
+	<Script file="core\EventHandlers.lua"/>
+	<Script file="core\Inspect.lua"/>
+	<Script file="core\Resurrects.lua"/>
+	<Script file="core\CLEU.lua"/>
+	<Script file="core\CooldownDefaults.lua"/>
+	<Script file="core\SlashCmd.lua"/>
+	<Script file="core\Profiling.lua"/>
+	
+	<Script file="display\MovingSizing.lua"/>
+	<Script file="display\elements\ElementBase.lua"/>
+	<Script file="display\elements\Mouse.lua"/>
+	<Script file="display\elements\Text.lua"/>
+	<Script file="display\elements\Icon.lua"/>
+	<Script file="display\elements\Bars.lua"/>
+	<Script file="display\DisplayGroup.lua"/>
+	<Script file="display\Display.lua"/>
+	<Script file="display\Output.lua"/>
+</Ui>
