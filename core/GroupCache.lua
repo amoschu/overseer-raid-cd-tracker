@@ -458,7 +458,6 @@ function GroupCache:SetPet(guid)
 		-- broadcast pet change (this may not actually mean anything since even the 'same' pet can have different GUIDs)
 		-- the only information this conveys is some de/spawning event happened to guid's pet
 		if petGUID ~= oldPetGUID and UnitHasFilter(name, optionalKeys.PET) then
-			-- TODO: do listeners handle this immediatley or are they sent the message at a later time?
 			addon:SendMessage(MESSAGES.GUID_CHANGE_PET, guid, petGUID)
 		end
 		result = true

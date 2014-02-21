@@ -30,6 +30,8 @@ local BREZ_MAX = {
 	...
 	--]]
 	
+    -- TODO: what is the max brez count for LFR, Flex? (I think LFR has no limit?)
+    -- TODO: need to include difficulty here somehow
 	[0] = inf,
 	[10] = 1,
 	[15] = 2, -- TODO: no idea what the brez count is for 15man (or if they will ever reintroduce a 15man instance)
@@ -83,7 +85,7 @@ local currentBrezMax = BREZ_MAX[0]
 -- Resurrection handling
 -- ------------------------------------------------------------------
 local function ClearBrezCacheFor(guid)
-	rezzers[guid] = nil -- TODO: pool dead tables? this is a table leak every time we clear
+	rezzers[guid] = nil
 	pendingRez[guid] = nil
 end
 
@@ -288,7 +290,7 @@ function addon:CastBrezOn(destGUID, srcGUID, isPrecastSoulstone)
 	end
 	
 	if not isPrecastSoulstone then
-		-- wipe away whatever previous value was stored because fuck communiation
+		-- wipe away whatever previous value was stored because fuck communication
 		pendingRez[destGUID] = GetTime() + PENDING_REZ_EXPIRE
 	else
 		pendingRez[destGUID] = PRECAST_SOULSTONE

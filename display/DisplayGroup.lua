@@ -278,8 +278,6 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 		local diffCol = curCol - oldCol -- curCol
 		
 		local sibling = byPosition[i]
-		local shiftX = diffCol * (firstWidth + spacingX) -- TODO: DELETE
-		local shiftY = diffRow * (firstHeight + spacingY) -- TODO: DELETE
 		local pt, rel, relPt, xOff, yOff = sibling:GetPoint()
 		if grow == "LEFT" or grow == "RIGHT" then
 			if diffRow ~= 0 then -- this sibling wrapped
@@ -303,7 +301,6 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 			end
 			
 		elseif grow == "TOP" or grow == "BOTTOM" then
-			-- TODO: MERGE WITH BOTTOM
 			if diffCol ~= 0 then
 				local spacing = (lastHeight == 0) and 0 or spacingY
 				yOff = (diffCol > 0) and 0 or lastY + ApplyDirection(grow, lastHeight + spacing)
@@ -444,9 +441,6 @@ local function AddChild(parent, child, position)
 		-- ideally, no throw-away closure would be created, but that would require caching the parent on every child which is unnecessary
 		sort(byPosition, function(a, b) return CompareChildren(byChild, a, b) end)
 		
-		-- TODO: TMP.. texts are not yet initialized..
-		--addon:ScheduleTimer("SendMessage", 3, MESSAGES.DISPLAY_GROUP_ADD, child, parent)
-		--
 		addon:SendMessage(MESSAGES.DISPLAY_GROUP_ADD, child, parent)
 		added = true
 	end
@@ -657,43 +651,11 @@ end
 DisplayGroup[MESSAGES.DISPLAY_SHOW] = function(self, msg, spellCD, display)
 	addon:PrintFunction(("Group -> showing %s"):format(tostring(spellCD)))
 	SpawnGroups(spellCD.spellid, display)
-	--[[
-	local childId = spellCD.spellid
-
-	local groupDB = addon.db:GetGroupOptions()
-	for groupId, groupOptions in next, groupDB do
-		if groupId ~= childId and groupId ~= GROUP_ID_INVALID then
-			if groupOptions.children[childId] then
-				local parentGroup = DisplayGroup[groupId]
-				if parentGroup then
-					HandleDynamicSettings(display, parentGroup, groupOptions, true)
-					ResizeParent(parentGroup)
-				end
-			end
-		end
-	end
-	--]]
 end
 
-DisplayGroup[MESSAGES.DISPLAY_HIDE] = function(self, msg, spellCD, display) -- TODO: recursive
+DisplayGroup[MESSAGES.DISPLAY_HIDE] = function(self, msg, spellCD, display)
 	addon:PrintFunction(("Group -> hiding %s"):format(tostring(spellCD)))
 	DespawnGroups(spellCD.spellid, display)
-	--[[
-	local childId = spellCD.spellid
-
-	local groupDB = addon.db:GetGroupOptions()
-	for groupId, groupOptions in next, groupDB do
-		if groupId ~= childId and groupId ~= GROUP_ID_INVALID then
-			if groupOptions.children[childId] then
-				local parentGroup = DisplayGroup[groupId]
-				if parentGroup then
-					HandleDynamicSettings(display, parentGroup, groupOptions)
-					ResizeParent(parentGroup)
-				end
-			end
-		end
-	end
-	--]]
 end
 
 -- ------------------------------------------------------------------

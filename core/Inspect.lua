@@ -351,7 +351,7 @@ function InspectQueue:Wipe()
 	wipe(self._staleAttempts)
 	wipe(self._retryLater)
 	
-	queriedGUID = nil -- if we're wiping, we shouldn't care anymore
+	queriedGUID = nil -- shoul no longer care if wiping
 	ClearInspectPlayer() -- TODO: needed?
 end
 
@@ -497,7 +497,7 @@ local function CacheInfo(guid)
 	return GroupCache:SetSpec(guid) and GroupCache:SetTalents(guid) and GroupCache:SetGlyphs(guid)
 end
 
-local function HasAllTalentsForLevel(guid) -- TODO: check if unit has filter
+local function HasAllTalentsForLevel(guid)
 	local result = true
 	local unit = GetUnitFromGUID(guid)
 	if unit and UnitHasFilter(unit, optionalKeys.TALENT) then
@@ -524,7 +524,7 @@ local function HasAllTalentsForLevel(guid) -- TODO: check if unit has filter
 	return result
 end
 
-local function HasAllMajorGlyphsForLevel(guid) -- TODO: check if unit has filter
+local function HasAllMajorGlyphsForLevel(guid)
 	local result = true
 	local unit = GetUnitFromGUID(guid)
 	if unit and UnitHasFilter(unit, optionalKeys.GLYPH) then

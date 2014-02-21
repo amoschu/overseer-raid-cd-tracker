@@ -168,10 +168,10 @@ local UnitAffectingCombat = UnitAffectingCombat -- TODO: TMP
 function addon:OnEnable()
 	self:PrintFunction(":OnEnable", true)
 	
-	-- TODO: TMP
+	-- TODO: TMP (trying to figure out best way to handle 'Script ran too long errors')
 	-- > if this does return true here on a fresh login then instead of doing the normal thing,
 	--	 :Register "PLAYER_REGEN_ENABLED" and boot up everything there
-	--	 ..what about client dc during boss fight?
+	--	 ..what about client dc during boss fight? (the above sln would mean Overseer won't load when coming back from a dc..)
 	if UnitAffectingCombat("player") then
 		addon:Error("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
 		addon:Error("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
@@ -211,7 +211,7 @@ function addon:OnEnable()
 	self:RegisterEvent("PLAYER_REGEN_ENABLED") -- player exits combat (death, combat ends)
 	self:RegisterEvent("ENCOUNTER_START") -- boss engage
 	self:RegisterEvent("ENCOUNTER_END")
-	self:RegisterEvent("CHALLENGE_MODE_COMPLETED") -- TODO: does this fire on any cmode reset?
+	self:RegisterEvent("CHALLENGE_MODE_COMPLETED") -- TODO: does this fire on any cmode reset? ie: does it include failed cmode?
 	self:RegisterEvent("UNIT_CONNECTION") -- unit online/offline
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED") -- catch cd usage & group members changing specs/talents/glyphs (note: CLEU version does not catch the latter)
 	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED") -- player changing specs (seems to sometimes fire for other players as well)

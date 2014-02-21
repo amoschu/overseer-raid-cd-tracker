@@ -418,8 +418,8 @@ local function CacheClassData(spellid, class, cooldownData, modData)
 	spellidsByClass[class][spellid] = true
 end
 
-local indent = consts.INDENT -- TODO: I don't think this works properly
-local function DebugUsageAddCooldown(spellid, cooldownData, modData)
+local indent = consts.INDENT
+local function DebugUsageAddCooldown(spellid, cooldownData, modData) -- TODO: I don't think this works properly
 	local msg = "Failed to add cooldown data. Please verify the data for %s(%s):\n%s%s:\n%s"
 	local data, optional = "", ""
 	if type(cooldownData) == "table" then

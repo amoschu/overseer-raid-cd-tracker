@@ -177,7 +177,7 @@ function addon:ENCOUNTER_END(event, encounterID, encounterName, difficultyId, ra
 	self:ProcessInspects() -- start up queued inspects since we are out of combat with a boss
 end
 
-local concat = table.concat -- TODO: TMP
+local concat = table.concat -- TODO: TMP (trying to figure out what args, if any, are passed to this event)
 function addon:CHALLENGE_MODE_COMPLETED(event, ...)
 	addon:PrintFunction(("%s(%s)"):format(event, concat({...}, ", ")), true)
 	

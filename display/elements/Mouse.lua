@@ -340,8 +340,6 @@ local function IsValidWidget(widget)
 	return type(widget) == "table" and type(widget.EnableMouse) == "function" and type(widget.GetScript) == "function"
 end
 
--- TODO: need to pass in all spellCDs which the widget displays (otherwise if the spellCD is ever invalidated, whatever mouse action is associated with the widget will fail)
--- TODO: register callback per script
 function Elements:RegisterMouse(widget, script, scriptCallback)
 	if IsValidWidget(widget) then
 		if type(scriptCallback) == "function" then
@@ -349,7 +347,7 @@ function Elements:RegisterMouse(widget, script, scriptCallback)
 				if type(MouseHandler[script]) == "function" then
 					local num = numMouseScripts[widget] or 0
 					numMouseScripts[widget] = num + 1
-					-- TODO: always ensure Enter/Leave is registered on any given 'script' (for feedback)
+                    -- TODO? ensure the corresponding start/end script is registered for feedback purposes?
 					widget:SetScript(script, MouseHandler[script])
 				else
 					local msg = "Elements:RegisterMouse(%s): no handler for script '%s'"

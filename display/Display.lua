@@ -47,7 +47,7 @@ local Frames = {
 -- ------------------------------------------------------------------
 -- Display message handling
 -- ------------------------------------------------------------------
-local function GetDisplayKey(spellCD) -- TODO: make local
+local function GetDisplayKey(spellCD)
 	return addon.db:GetConsolidatedKey(spellCD.spellid) or spellCD
 end
 
@@ -117,23 +117,6 @@ function addon:GetMostRecentBuffCastSpell(display)
 	return mostRecent
 end
 
-function addon:TestToggle(spellid) -- TODO: TMP
-	local key = addon.db:GetConsolidatedKey(spellid) or -1
-	for spell, display in next, Frames do
-		local displayKey = GetDisplayKey(spell)
-		if spell.spellid == spellid or displayKey == key then
-			if display:IsVisible() then
-				self:Print(GetSpellInfo(spellid).." hiding")
-				display:Hide()
-			else
-				self:Print(GetSpellInfo(spellid).." showing")
-				display:Show()
-			end
-			break
-		end
-	end
-end
-
 local MovableObject = addon.MovableObject -- TODO: don't blindly make all display frames movable
 local SizableObject = addon.SizableObject
 local function GetFrame(spellCD)
@@ -144,7 +127,6 @@ local function GetFrame(spellCD)
 		frame:SetScale(1.0)
 	end
 	
-	-- TODO: flag as "Frame" or something (need to differentiate between groups.. I think?)
 	MovableObject:Embed(frame, "Frame")
 	SizableObject:Embed(frame)
 	
@@ -156,7 +138,6 @@ local function GetFrame(spellCD)
 	
 	frame:SetPoint(addon.db:LookupPosition(spellCD.spellid))
 	
-	-- TODO: animations/sounds?
 	frame:Show()
 	return frame
 end

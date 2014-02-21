@@ -582,7 +582,7 @@ local function StartBar(bar, spellCD, display, duration, expire, posIdx)
 	-- show label
 	if db.bar.label.shown then
 		local useClassColor = db.bar.label.useClassColor
-		-- TODO: parse text? show spellname instead?
+		-- TODO: parse text? show spellname instead? ..the user needs to be able to set this text
 		bar:SetLabel(useClassColor and GUIDClassColoredName(spellCD.guid) or GUIDName(spellCD.guid))
 	end
 	
@@ -739,10 +739,9 @@ Bars[MESSAGES.DISPLAY_BUFF_EXPIRE] = function(self, msg, spellCD, display)
 			local mostRecentBar = FindBar(spell, display)
 			if mostRecentBar then
 				-- a bar is already displayed for the spell about to be shown..
-				-- TODO: I'm like 95% sure this is an error
+                -- this can happen if the current bar overrode the spellCD whose buff just expired
 				local msg = "%s> Attempting to start another buff bar for %s.."
 				addon:Error(msg:format(_DEBUG_BARS_PREFIX, tostring(spell))) -- TODO: change to :Debug
-				--mostRecentBar:Stop() -- Dunno if the bar should be stopped and started again, though
 			end
 			
 			-- boot up another buff duration bar (show an overridden buff bar that is still ticking)

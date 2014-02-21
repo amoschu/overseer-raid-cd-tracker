@@ -194,12 +194,8 @@ local optionalKeys
 local eventsByFilter
 local INSPECT_EVENT = "INSPECT_READY"
 function addon.UnitNeedsInspect(unit)
-	if not optionalFilters then
-		optionalKeys = addon.consts.filterKeys[ addon.consts.FILTER_OPTIONAL ]
-	end
-	if not eventsByFilter then
-		eventsByFilter = addon.consts.eventsByFilter
-	end
+    optionalKeys = optionalKeys or addon.consts.filterKeys[ addon.consts.FILTER_OPTIONAL ]
+    eventsByFilter = eventsByFilter or addon.consts.eventsByFilter
 
 	local result = false
 	if unit then

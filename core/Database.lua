@@ -429,7 +429,7 @@ function addon:InitializeDatabase()
 		
 if false then -- TODO: DELETE ..when the time is right!! (this is probably going to be one of those comments that made me laugh when I wrote it but when I re-read it makes me go 'wtf is this')
 		LoadUserDefaults()
-		-- TODO: prune the database of any group tables where .id==GROUP_ID_INVALID
+		-- TODO: prune the database of any group tables where .id==GROUP_ID_INVALID ..how would this happen?
 end --
 		
 		local function OnProfileUpdate()
