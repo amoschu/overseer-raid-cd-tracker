@@ -383,7 +383,10 @@ end
 
 local playerDied -- flag player death
 local playerReleasedTime -- cache time player released
-local GHOST_FORM_TOO_LONG = 10 -- spending too much time outside the instance may void our tracking state
+-- spending too much time outside the instance may void our tracking state
+-- technically, any time the client spends outside of event range is too much time
+-- but, forcing a full re-inspect of all group members every time the player releases is probably too often
+local GHOST_FORM_TOO_LONG = 10
 local function PlayerReleased()
 	return playerDied
 end
@@ -424,17 +427,25 @@ function addon:ZONE_CHANGED_NEW_AREA(event)
 			self:SetPlayerZone() -- TODO: I think this will flag people who are in ghost form outside the instance running back in
 			
 			-- ensure we're in an instance
-			-- non-instance ZONE_CHANGED events should indicate that the player is moving around world zones
-			-- 	 which have no impact on our state
+			-- non-instance ZONE_CHANGED events should indicate that the player is moving around world zones which have no impact on our state
 			local maxPlayers = select(5, GetInstanceInfo())
-			if maxPlayers > 0 or PlayerInGhostFormTooLong() then
+			if maxPlayers > 0 then
+                self:ScanGroup()
+            end
+            if PlayerInGhostFormTooLong() then
 				-- this is kind of shitty, but we need to make sure that our tracked state is ok
-				-- note: this also happens when joining a x-realm group solo (like solo-queueing lfr)
-				self:Print(("scanning group from %s.."):format(event))
-				self:ScanGroup()
+                -- there is a possibility that someone changed their spec/talents/glyphs while the client was in ghost form (ie, out of range)
+                -- which potentially invalidates whatever the Cooldown state is - the problem is there is no telling who, if anyone, changed something
+				self:Print(("%s: |cffFF00FFreinspecting|r entire group.."):format(event))
+                local NUM_GROUP_MEMBERS = GetNumGroupMembers()
+                for i = 1, NUM_GROUP_MEMBERS do
+                    local name = GetRaidRosterInfo(i)
+                    if name and UnitNeedsInspect(name) then
+                        self:Inspect(name)
+                    end
+                end
 			end
-			-- player zoned in alive, we no longer need to keep the time s/he released
-			playerReleasedTime = nil
+			playerReleasedTime = nil -- player zoned in alive, we no longer need to keep the time s/he released
 		elseif not playerReleasedTime then
 			-- player released into ghost form
 			playerReleasedTime = GetTime()
