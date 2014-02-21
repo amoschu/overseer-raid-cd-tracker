@@ -613,12 +613,15 @@ local function StartBar(bar, spellCD, display, duration, expire, posIdx)
 end
 
 local function StartCooldown(spellCD, display)
-	local bar = GetBar(spellCD, display)
-	if bar then
-		local db = addon.db:GetDisplaySettings(spellCD.spellid)
-		bar:SetColor(GetColorFromDB(db.bar.bar, spellCD))
-		bar:SetFill(db.bar.fill)
-		StartBar(bar, spellCD, display)
+    local db = addon.db:GetDisplaySettings(spellCD.spellid)
+    if db.bar.shown and db.bar.cooldown then
+        local bar = GetBar(spellCD, display)
+        if bar then
+            local db = addon.db:GetDisplaySettings(spellCD.spellid)
+            bar:SetColor(GetColorFromDB(db.bar.bar, spellCD))
+            bar:SetFill(db.bar.fill)
+            StartBar(bar, spellCD, display)
+        end
 	end
 end
 
@@ -632,7 +635,7 @@ end
 local function StartBuffDurationCountdown(spellCD, display)
 	local result -- true if a buff duration bar is started
 	local db = addon.db:GetDisplaySettings(spellCD.spellid)
-	if db.bar.showBuffDuration then
+	if db.bar.shown and db.bar.showBuffDuration then
 		local now = GetTime()
 		local buffExpire = spellCD:BuffExpirationTime()
 		
@@ -760,20 +763,17 @@ end
 -- OnUse
 -- ------------------------------------------------------------------
 Bars[MESSAGES.DISPLAY_USE] = function(self, msg, spellCD, display)
-	local db = addon.db:GetDisplaySettings(spellCD.spellid)
-	if db.bar.shown then -- TODO: db.bar.cooldown
-		-- try to start a buff duration bar
-		if not StartBuffDurationCountdown(spellCD, display) then
-			-- try to start a cooldown bar for this spellCD use
-			local bar = FindBar(spellCD, display)
-			if not bar then
-				StartCooldown(spellCD, display)
-				-- if a bar exists, another charge was used for this specific spellCD instance while a bar was actively running for it
-				-- a spellCD instance can only have one cooldown running at a time, so showing another bar for it would
-				-- be conveying the same cooldown information twice
-			end
-		end
-	end
+    -- try to start a buff duration bar
+    if not StartBuffDurationCountdown(spellCD, display) then
+        -- try to start a cooldown bar for this spellCD use
+        local bar = FindBar(spellCD, display)
+        if not bar then
+            StartCooldown(spellCD, display)
+            -- if a bar exists, another charge was used for this specific spellCD instance while a bar was actively running for it
+            -- a spellCD instance can only have one cooldown running at a time, so showing another bar for it would
+            -- be conveying the same cooldown information twice
+        end
+    end
 end
 
 -- ------------------------------------------------------------------
