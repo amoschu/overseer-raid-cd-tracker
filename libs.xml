@@ -8,7 +8,7 @@
 	<Include file="libs\AceEvent-3.0\AceEvent-3.0.xml"/>
 	<Include file="libs\AceTimer-3.0\AceTimer-3.0.xml"/>
 	<Include file="libs\AceDB-3.0\AceDB-3.0.xml"/>
-	<Include file="libs\ChatThrottleLib\ChatThrottleLib.xml"/>
+	<Include file="libs\ChatThrottleLib\ChatThrottleLib.xml"/> <!-- TODO: remove? change to Ace-Comm? need for Output? -->
 	<Include file="libs\LibCandyBar-3.0\lib.xml"/>
 	<Include file="libs\LibSharedMedia-3.0\lib.xml"/>
     <!--@end-no-lib-strip@-->

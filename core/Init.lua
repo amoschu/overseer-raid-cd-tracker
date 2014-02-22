@@ -7,6 +7,8 @@ addon:SetDefaultModuleState(false)
 addon.NAME_COLOR = "ffED2939"
 addon.REGISTER_COLOR = "ff6699FF"
 
+addon.OPTIONS_MODULE = "Options"
+
 -- ------------------------------------------------------------------
 -- Set public globals
 -- ------------------------------------------------------------------

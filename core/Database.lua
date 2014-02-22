@@ -38,7 +38,7 @@ do -- setup default table
 		hide = { -- hide events
 			dead = false,
 			offline = false,
-			benched = true,
+			benched = false,
 		},
 		unique = false,
 		-- position information
@@ -238,7 +238,7 @@ do -- setup default table
 		},
 	}
 	
-	defaults.profile.spells.consolidated = {
+	defaults.profile.consolidated = {
 		--[[
 			these define a grouping of spells to be shown under the same display
 				note: they are distinct from a positional grouping of spells
@@ -248,14 +248,14 @@ do -- setup default table
 		--]]
 		["**"] = defaults.profile.spells["**"],
 		[CONSOLIDATED_ID:format(1)] = {
-			--[[
+			--[[ TODO: OLD -> DELETE when no errors from brez
 			spellids = {
 				-- list of all ids encountered which are consolidated into this db
 				-- (filled dynamically)
 				-- [spellid] = true,
 			},
 			--]]
-			name = "bRez",
+			name = "bRez", -- TODO: localization
 			texts = {
 				{
 					value = ESC_SEQUENCES.NUM_BREZ,
@@ -334,8 +334,8 @@ do -- setup default table
 		
 		[GROUP_ID:format(1)] = { -- raid cds
 			id = GROUP_ID:format(1),
-			name = "Raid CDs",
-			children = {
+			name = "Raid CDs", -- TODO: localization
+			children = { -- TODO: children values cannot have holes - need to check on LOGOUT
 				[76577] = 1, -- bomb
 				[31821] = 2, -- devo
 				[97462] = 3, -- rally
@@ -356,7 +356,7 @@ do -- setup default table
 		},
 		[GROUP_ID:format(2)] = { -- external cds
 			id = GROUP_ID:format(2),
-			name = "External CDs",
+			name = "External CDs", -- TODO: localization
             dynamic = {
                 type = GROUP_TYPES.GRID,
             },
@@ -379,7 +379,7 @@ do -- setup default table
 		},
 		[GROUP_ID:format(3)] = { -- movement cds
 			id = GROUP_ID:format(3),
-			name = "Movement CDs",
+			name = "Movement CDs", -- TODO: localization
 			children = {
 				[106898] = 1, -- stampeding roar
 				[122294] = 2, -- stampeding shout (dps warrior symbiosis)
@@ -389,7 +389,7 @@ do -- setup default table
 		},
 		[GROUP_ID:format(4)] = { -- dps cds
 			id = GROUP_ID:format(4),
-			name = "DPS CDs",
+			name = "DPS CDs", -- TODO: localization
 			children = {
 				[120668] = 1, -- stormlash
 				[114207] = 2, -- skull banner
@@ -398,7 +398,7 @@ do -- setup default table
 		},
 		[GROUP_ID:format(5)] = { -- mana cds
 			id = GROUP_ID:format(5),
-			name = "Mana CDs",
+			name = "Mana CDs", -- TODO: localization
 			children = {
 				[64901] = 1, -- hymn of hope
 				[16190] = 2, -- mana tide
@@ -408,10 +408,17 @@ do -- setup default table
 	}
 end
 
+-- ------------------------------------------------------------------
+-- Helpers
+-- ------------------------------------------------------------------
+local function GetDatabase()
+	return addon.db.Database
+end
+
 local function LoadUserDefaults()
 	-- override the hard-coded defaults with user specified defaults
 	-- note: this prevents any change to the hard-coded defaults from being reflected in-game (if there are saved changes to the defaults)
-	local userDefaults = db:GetProfile().spells["**"]
+	local userDefaults = db:GetProfile().spells["**"] -- this will inherit from the hard-coded defaults if there are no user defaults which is not actually a problem
 	if userDefaults then
 		defaults.profile.spells["**"] = userDefaults
 		db.Database:RegisterDefaults(defaults)
@@ -445,22 +452,10 @@ end --
 end
 
 -- ------------------------------------------------------------------
--- Helpers
--- ------------------------------------------------------------------
-local function GetDatabase()
-	return addon.db.Database
-end
-
--- ------------------------------------------------------------------
 -- Lookup
 -- ------------------------------------------------------------------
 function db:GetProfile()
 	return GetDatabase().profile
-end
-
-function db:GetGroupOptions(key)
-	local groupDB = self:GetProfile().groups
-	return key and groupDB[key] or groupDB
 end
 
 function db:GetConsolidatedKey(key)
@@ -469,17 +464,32 @@ function db:GetConsolidatedKey(key)
 	return options and options.consolidated
 end
 
+function db:GetDefaultSettings()
+    local profile = self:GetProfile()
+    return profile.spells["**"]
+end
+
+function db:GetSpellSettings(key)
+    local profile = self:GetProfile()
+    local options = profile.spells[key]
+    return options
+end
+
+function db:GetConsolidatedSettings(key)
+    local profile = self:GetProfile()
+    local options = profile.consolidated[key]
+    return options
+end
+
+function db:GetGroupOptions(key)
+	local groupDB = self:GetProfile().groups
+	return key and groupDB[key] or groupDB
+end
+
 -- get the corresponding settings table for the given display key
 function db:GetDisplaySettings(key)
-	local profile = self:GetProfile()
-	local options = profile.spells[key]
-	local consolidated = options.consolidated and profile.spells.consolidated[options.consolidated]
-	if consolidated then
-		-- TODO: this does not need to be saved to file..
-		-- also, this misses spellids that have not been encountered (which should not matter.. at least not yet)
-		consolidated.spellids = consolidated.spellids or {}
-		consolidated.spellids[key] = true
-	end
+	local options = self:GetSpellSettings(key)
+	local consolidated = options.consolidated and self:GetProfile().consolidated[options.consolidated]
 	
 	-- look for consolidated settings first; fallback to single-spell settings
 	return consolidated or options

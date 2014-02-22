@@ -1,0 +1,12 @@
+## Interface: 50400
+## Title: Overseer |cffED2939Options|r
+## Author: Latreese
+## Version: @project-version@
+## Notes: GUI options for Overseer
+
+## DefaultState: Enabled
+## LoadOnDemand: 1
+## SavedVariables: OverseerOptionsDB
+## Dependencies: Overseer
+
+OverseerOptions.xml

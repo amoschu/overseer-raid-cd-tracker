@@ -1,0 +1,24 @@
+
+package-as: OverseerOptions
+
+externals:
+    libs/AceConfigRegistry-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfigRegistry-3.0
+        tag: latest
+    libs/AceConfigDialog-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfigDialog-3.0
+        tag: latest
+    libs/AceDBOptions-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDBOptions-3.0
+        tag: latest
+    libs/AceGUI-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceGUI-3.0
+        tag: latest
+    libs/AceGUI-3.0-SharedMediaWidgets:
+        url: svn://svn.wowace.com/wow/ace-gui-3-0-shared-media-widgets/mainline/trunk/AceGUI-3.0-SharedMediaWidgets
+        tag: latest
+
+    libs/LibDDI-1.0:
+        url: svn://svn.wowace.com/wow/libddi-1-0/mainline/trunk/LibDDI-1.0
+        tag: latest
+

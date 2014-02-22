@@ -10,10 +10,22 @@ local consts = addon.consts
 local append = addon.TableAppend
 
 local INDENT = consts.INDENT
+local OPTIONS_MODULE = addon.OPTIONS_MODULE
 local OPTIONS = "OverseerOptions"
 local PLAYER_REGEN_ENABLED = "PLAYER_REGEN_ENABLED"
 
 local waitingToLoad -- flag indicating that user attempted to load options while in combat
+
+local function OpenConfigWindow()
+    local options = addon:GetModule(OPTIONS_MODULE, true)
+    if options then
+        options:OpenWindow()
+    else
+        -- how? ..maybe :GetModule non-silently instead
+        local msg = "No module named '%s' exists!"
+        addon:Debug(msg:format(OPTIONS_MODULE))
+    end
+end
 
 function addon:LoadOptions()
 	if waitingToLoad and not IsAddOnLoaded(OPTIONS) then
@@ -24,21 +36,23 @@ function addon:LoadOptions()
 			local msg = "Failed to load %s: %s."
 			addon:Warn(msg:format(OPTIONS, _G["ADDON_" .. reason]))
 		else
-			-- TODO - needed?
+			-- TODO - needed? ..I don't think there's a need to mess with Enable/Disable for the options module
 			--[[
-			local options = addon:GetModule("Options")
+			local options = addon:GetModule(OPTIONS_MODULE)
 			options:Enable()
 			--]]
 			
-			local msg = "%s loaded!"
+			local msg = "%s loaded"
 			addon:Info(msg:format(OPTIONS))
+            OpenConfigWindow()
 		end
 	end
 end
 
-local function TryToLoadOptions()
-	if not addon:GetModule("Options", true) then
-		local enabled = select(4, GetAddOnInfo(OPTIONS))
+local MISSING = "MISSING"
+local function LoadOptionsAndOpenWindow()
+	if not addon:GetModule(OPTIONS_MODULE, true) then
+		local enabled, _, reason = select(4, GetAddOnInfo(OPTIONS))
 		if enabled then
 			if InCombatLockdown() or UnitAffectingCombat("player") then
 				local msg = "Loading %s after combat ends."
@@ -47,15 +61,16 @@ local function TryToLoadOptions()
 			else
 				addon:LoadOptions()
 			end
-		else -- TODO: missing logic & msg
-			local msg = "Could not load %s because it is not enabled."
+        elseif reason == MISSING then
+            local msg = "Could not locate an addon named '%s'. Was it renamed? Is it in your addons folder?"
+            addon:Error(msg:format(OPTIONS))
+		else
+			local msg = "Could not load '%s' because it is not enabled."
 			addon:Error(msg:format(OPTIONS))
 		end
+    else
+        OpenConfigWindow()
 	end
-end
-
-local function OpenConfigWindow()
-	-- TODO (this may not need to be it's own function)
 end
 
 -- ------------------------------------------------------------------
@@ -269,10 +284,6 @@ function SlashCmdList.OVERSEER(msg)
 		local exec = type(commands[cmd]) == "function" and commands[cmd] or commands['h']
 		exec(args)
 	else
-		addon:Print("[GUI mode under construction - check back later]", true)
-		--[[
-		TryToLoadOptions()
-		OpenConfigWindow()
-		--]]
+		LoadOptionsAndOpenWindow()
 	end
 end
