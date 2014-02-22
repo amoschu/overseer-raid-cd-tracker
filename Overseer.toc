@@ -1,7 +1,7 @@
 ## Interface: 50400
 ## Title: Overseer
 ## Author: Latreese
-## Version: 0.1
+## Version: @project-version@
 ## Notes: A customizable raid cooldown tracker
 
 ## X-Overseer-Log-Level: COOLDOWN

@@ -355,6 +355,7 @@ function addon:Critical(message, level)
 	error(message, tonumber(level) or 2)
 end
 
+--@do-not-package@
 --------------------------------------------------------- TODO: TMP
 local indent
 local GUIDClassColoredName = addon.GUIDClassColoredName
@@ -421,3 +422,4 @@ function addon:DebugCooldownsFor(unit)
 		self:Print( (":DebugCooldownsFor(\"%s\") - bad unit argument"):format(tostring(unit)), true )
 	end
 end
+--@end-do-not-package@

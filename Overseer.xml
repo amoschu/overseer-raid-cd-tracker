@@ -1,5 +1,7 @@
 ﻿<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!--@no-lib-strip@-->
 	<Include file="libs.xml"/>
+    <!--@end-no-lib-strip@-->
 
 	<Script file="core\Init.lua"/>
 	<Script file="core\Util.lua"/>
@@ -29,4 +31,8 @@
 	<Script file="display\DisplayGroup.lua"/>
 	<Script file="display\Display.lua"/>
 	<Script file="display\Output.lua"/>
+    <!--@do-not-package@-->
+    <!-- this is for dev versions only as the packager should move the options directory into its own addon -->
+    <Include file="options\OverseerOptions.xml"/>
+    <!--@end-do-not-package@-->
 </Ui>
