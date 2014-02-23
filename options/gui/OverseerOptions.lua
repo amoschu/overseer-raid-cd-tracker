@@ -2,7 +2,6 @@
 local addon = Overseer
 local options = addon:NewModule(addon.OPTIONS_MODULE)
 local ME = addon:GetName()
-local ACD = LibStub("AceConfigDialog-3.0") -- need?
 local AG = LibStub("AceGUI-3.0")
 
 -- ------------------------------------------------------------------
@@ -62,10 +61,10 @@ local windowTabs = {
         value = options.consts.tabs.PROFILES,
     },
 }
+local registered
 function options:OpenWindow()
     -- TODO: hook GameMenuFrame Show => Hide window if open
-
-    --[[ TODO: OLD - manually creating stuff with AceGUI
+    
     if not window then
         window = AG:Create("Window")
         window:SetTitle(("|c%s%s|r"):format(addon.NAME_COLOR, ME))
@@ -96,7 +95,6 @@ function options:OpenWindow()
         -- if there is no .frame, AceGUI changed its internal structure
         window.frame:SetScript("OnSizeChanged", OnSizeChanged)
     end
-    --]]
 end
 
 addon:ScheduleTimer(options.OpenWindow, 10, options) -- TODO: TMP
