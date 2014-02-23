@@ -55,7 +55,7 @@ do -- setup default table
 		strata = "BACKGROUND",
 		frameLevel = 2, -- min value needs to be 2 (icons use db.frameLevel-1, border frame uses -2)
 		--
-		mouseFeedback = true,
+		mouseFeedback = true, -- TODO: remove
 		font = { -- default font settings
 			font = LSM:Fetch(MediaType.FONT, "Friz Quadrata TT"),
 			size = 12,
@@ -434,7 +434,7 @@ function addon:InitializeDatabase()
 	if not db.Database then
 		db.Database = LibStub("AceDB-3.0"):New("OverseerDB", defaults, true)
 		
-if false then -- TODO: DELETE ..when the time is right!! (this is probably going to be one of those comments that made me laugh when I wrote it but when I re-read it makes me go 'wtf is this')
+if true then -- TODO: DELETE ..when the time is right!! (this is probably going to be one of those comments that made me laugh when I wrote it but when I re-read it makes me go 'wtf is this')
 		LoadUserDefaults()
 		-- TODO: prune the database of any group tables where .id==GROUP_ID_INVALID ..how would this happen?
 end --
