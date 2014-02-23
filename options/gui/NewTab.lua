@@ -9,12 +9,18 @@ local consts = options.consts
 -- 'Create' tab
 -- ------------------------------------------------------------------
 options.tab[consts.tabs.NEW] = function(container)
-    local scrollFrame = AG:Create("ScrollFrame")
-    scrollFrame:SetFullWidth(true)
-    scrollFrame:SetFullHeight(true)
-    scrollFrame:SetLayout("List")
+    -- local scrollFrame = AG:Create("ScrollFrame")
+    -- scrollFrame:SetFullWidth(true)
+    -- scrollFrame:SetFullHeight(true)
+    -- scrollFrame:SetLayout("List")
     
-    -- TODO: space these out more / fill some of this empty space
+    container:SetLayout("List")
+    
+    local topSpacing = AG:Create("SimpleGroup")
+    --topSpacing:SetFullWidth(true)
+    --topSpacing:SetFullHeight(true)
+    topSpacing:SetLayout("Fill")
+    container:AddChild(topSpacing)
     
     -- local displayHeader = AG:Create("Heading")
     -- displayHeader:SetText("Track a new spell")
@@ -25,7 +31,7 @@ options.tab[consts.tabs.NEW] = function(container)
     display:SetText("Track a new spell")
     display:SetFullWidth(true)
     display:SetCallback("OnClick", function() print("TRACK SPELL FLOW") end)
-    scrollFrame:AddChild(display)
+    container:AddChild(display)
     
     -- local groupHeader = AG:Create("Heading")
     -- groupHeader:SetText("Create a new group")
@@ -34,14 +40,11 @@ options.tab[consts.tabs.NEW] = function(container)
     
     local spacer = AG:Create("Heading")
     spacer:SetFullWidth(true)
-    scrollFrame:AddChild(spacer)
+    container:AddChild(spacer)
     
     local group = AG:Create("Button")
     group:SetText("Create a new group")
     group:SetFullWidth(true)
     group:SetCallback("OnClick", function() print("CREATE NEW GROUP FLOW") end)
-    scrollFrame:AddChild(group)
-    
-    container:SetLayout("Fill")
-    container:AddChild(scrollFrame)
+    container:AddChild(group)
 end

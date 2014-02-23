@@ -1,11 +1,13 @@
 
-local strsplit, wipe, next, type, insert
-    = strsplit, wipe, next, type, table.insert
+local strsplit, wipe, next, tostring, type, insert
+    = strsplit, wipe, next, tostring, type, table.insert
 local GetSpellInfo = GetSpellInfo
 
 local addon = Overseer
 local options = addon:GetModule(addon.OPTIONS_MODULE)
 local AG = LibStub("AceGUI-3.0")
+local ACR = LibStub("AceConfigRegistry-3.0")
+local ACD = LibStub("AceConfigDialog-3.0")
 
 local consts = options.consts
 local append = addon.TableAppend
@@ -13,8 +15,18 @@ local append = addon.TableAppend
 local GROUP_ID = addon.consts.GROUP_ID
 local CONSOLIDATED_ID = addon.consts.CONSOLIDATED_ID
 
+local valueToText = {
+    --[[
+    flat table pairing values to their displayed text in the tree
+    
+    form:
+    [value] = "text",
+    ...
+    --]]
+}
+
 -- ------------------------------------------------------------------
--- Edit tab
+-- Tree group construction
 -- ------------------------------------------------------------------
 --[[
     the tree should take the following form:
@@ -51,10 +63,13 @@ local function CreateSpellEntry(spellid)
     local spellEntry
     local spellname, _, icon = GetSpellInfo(spellid)
     if spellname and icon then
+        local db = addon.db:GetSpellSettings(spellid)
         spellEntry = {}
         spellEntry.value = spellid
-        spellEntry.text = text:format(spellname, spellid)
+        spellEntry.text = text:format(db.name or spellname, spellid)
         spellEntry.icon = icon
+        
+        valueToText[tostring(spellEntry.value)] = spellEntry.text
     end
     return spellEntry
 end
@@ -65,7 +80,7 @@ local function PopulateTree()
     --[[
     TODO: this causes a decent amount of unnecessary memory + cpu churn whenever the user changes tabs
         if the user is only switching tabs, chances are this is unneeded except for the initial populate
-        so, need to be notified of display setting change that affects this structure to update it
+        instead, update the structure after the initial populate whenever it changes
     --]]
     
     local tree = {}
@@ -91,6 +106,7 @@ local function PopulateTree()
             local defaults = {}
             defaults.value = spellid
             defaults.text = "Default Settings" -- TODO: localization
+            valueToText[defaults.value] = defaults.text
             --defaults.icon -- TODO: a generic icon for this
             tree[1] = defaults
         end
@@ -102,6 +118,7 @@ local function PopulateTree()
         local consolidatedEntry = {}
         consolidatedEntry.value = consolidatedId
         consolidatedEntry.text = consolidatedData.name
+        valueToText[consolidatedEntry.value] = consolidatedEntry.text
         consolidatedEntry.children = {}
         for spellEntry, id in next, byConsolidatedId do
             if consolidatedId == id then
@@ -118,7 +135,7 @@ local function PopulateTree()
         -- don't throw the entry into the tree just yet - it may be part of a group
         byConsolidatedId[consolidatedId] = consolidatedEntry
     end
-    -- validate that all of the consolidated data
+    -- validate all of the consolidated data
     for id in next, byConsolidatedId do
         if type(id) == "table" then
             -- no consolidated data found for this spellEntry, but the spell data said it is part of a consolidated display..
@@ -134,6 +151,7 @@ local function PopulateTree()
         local groupEntry = {}
         groupEntry.value = groupId
         groupEntry.text = group.name
+        valueToText[groupEntry.value] = groupEntry.text
         groupEntry.children = {}
         for id, pos in next, group.children do
             local childEntry
@@ -177,42 +195,140 @@ local function PopulateTree()
     return tree
 end
 
-local delim = "\001" -- AceGUI TreeGroup widget subgroup delimiter
-local function OnGroupSelected(container, event, group)
+-- ------------------------------------------------------------------
+-- Tab select
+-- ------------------------------------------------------------------
+local DISPLAY_TAB = "DISPLAY"
+local ICON_TAB = "ICON"
+local BARS_TAB = "BARS"
+local TEXTS_TAB = "TEXTS"
+-- tab definitions - TODO: localization of 'text' fields
+local DisplayTab    = { text = "Display", value = DISPLAY_TAB }
+local IconTab       = { text = "Icon", value = ICON_TAB }
+local BarsTab       = { text = "Bars", value = BARS_TAB }
+local TextsTab      = { text = "Texts", value = TEXTS_TAB }
+
+-- ------------------------------------------------------------------
+-- Draw the tab selection
+local TabSelection = {}
+-- display tab
+TabSelection[DISPLAY_TAB] = function(db, container)
+    local profileOptions = ADO:GetOptionsTable(addon.db.Database)
+    ACR:RegisterOptionsTable(PROFILE, profileOptions)
+    ACD:Open(PROFILE, container)
+end
+
+-- icon tab
+TabSelection[ICON_TAB] = function(db, container)
+end
+
+-- bars tab
+TabSelection[BARS_TAB] = function(db, container)
+end
+
+-- texts tab
+TabSelection[TEXTS_TAB] = function(db, container)
+end
+
+-- ------------------------------------------------------------------
+-- Draw the tree group selection
+local DrawSelection = {}
+
+local function DrawTabSelectBaseArea(container)
     container:ReleaseChildren()
+
+    -- this group is needed for re-sizing
+    -- without it, the scrollframe acts like a fool
+    local simpleGroup = AG:Create("SimpleGroup")
+    simpleGroup:SetFullWidth(true)
+    simpleGroup:SetFullHeight(true)
+    simpleGroup:SetLayout("Fill")
+    container:AddChild(simpleGroup)
     
     -- populate the container based on the selected group from the tree
     local scrollFrame = AG:Create("ScrollFrame")
     scrollFrame:SetFullWidth(true)
     scrollFrame:SetFullHeight(true)
-    scrollFrame:SetLayout("List")
-    container:AddChild(scrollFrame)
+    scrollFrame:SetLayout("List")  -- TODO: custom layout
+    scrollFrame:SetStatusTable(bar)
+    simpleGroup:AddChild(scrollFrame)
+    
+    return scrollFrame
+end
+
+-- spell selection
+DrawSelection["spell"] = function(id, container)
+    local db = addon.db:GetSpellSettings(id)
+    addon:Print(("%s is a spell!"):format(id))
+    --[[
+        TODO: check if this is part of a consolidated display
+            if so, only create a button to unmerge from display
+    --]]
+end
+
+-- group selection
+DrawSelection["group"] = function(id, container)
+    local db = addon.db:GetGroupOptions(id)
+    addon:Print(("%s is a group!"):format(id))
+end
+
+-- consolidated display selection
+DrawSelection["consolidated"] = function(id, container)
+    local db = addon.db:GetConsolidatedSettings(id)
+    addon:Print(("%s is a merged display!"):format(id))
+end
+
+-- defaults selection
+local bar = {} -- TODO: TMP - replace w/ options db
+DrawSelection["defaults"] = function(id, container)
+    local db = addon.db:GetDefaultSettings()
+    addon:Print(("%s is the default settings!"):format(id))
+    
+    local tabGroup = AG:Create("TabGroup")
+    tabGroup:SetFullWidth(true)
+    tabGroup:SetFullHeight(true)
+    tabGroup:SetLayout("Fill")
+    
+    tabGroup:SetTabs({
+        DisplayTab,
+        IconTab,
+        BarsTab,
+        TextsTab,
+    })
+    tabGroup:SetCallback("OnGroupSelected",
+        function(container, event, tab)
+            TabSelection[tab](db, DrawTabSelectBaseArea(container))
+        end
+    )
+    tabGroup:SelectTab(DISPLAY_TAB) -- TODO: read from db
+    container:AddChild(tabGroup)
+end
+
+local BAD_ID_VALUE = "???"
+local delim = "\001" -- AceGUI TreeGroup widget subgroup delimiter
+local function OnTreeSelect(container, event, group)
+    container:ReleaseChildren()
     
     local badId
     -- figure out which group was selected
     local groupStructure = { strsplit(delim, group) }
     local id = groupStructure[#groupStructure]
+    
+    -- a superfluous header
+    local header = AG:Create("Heading")
+    header:SetText(valueToText[id] or BAD_ID_VALUE)
+    header:SetFullWidth(true)
+    container:AddChild(header)
+    
     if type(id) == "string" then -- should be an unnecessary check
-        if id:match("^%d+$") then
-            -- spell entry
-            local db = addon.db:GetSpellSettings(id)
-            --[[
-                TODO: check if this is part of a consolidated display
-                    if so, only create a button to unmerge from display
-            --]]
-            addon:Print(("%s is a spell!"):format(id))
-        elseif id:match(GROUP_ID) then
-            -- group
-            local db = addon.db:GetGroupOptions(id)
-            addon:Print(("%s is a group!"):format(id))
-        elseif id:match(CONSOLIDATED_ID) then
-            -- merged display
-            local db = addon.db:GetConsolidatedSettings(id)
-            addon:Print(("%s is a merged display!"):format(id))
-        elseif id == "**" then
-            -- defaults entry
-            local db = addon.db:GetDefaultSettings()
-            addon:Print(("%s is the default settings!"):format(id))
+        if id:match("^%d+$") then -- spell entry
+            DrawSelection["spell"](id, container)
+        elseif id:match(GROUP_ID) then -- group
+            DrawSelection["group"](id, container)
+        elseif id:match(CONSOLIDATED_ID) then -- merged display
+            DrawSelection["consolidated"](id, container)
+        elseif id == "**" then -- defaults entry
+            DrawSelection["defaults"](id, container)
         else
             badId = true
         end
@@ -224,33 +340,24 @@ local function OnGroupSelected(container, event, group)
         -- a wild id appears!
         addon:Debug(("'%s' tab encountered an unexpected id='%s'"):format(consts.tabs.EDIT, id))
     end
-    
-    for i = 1, 20 do
-        local button = AG:Create("Button")
-        button:SetText("CLICK")
-        button:SetWidth(100)
-        button:SetCallback("OnClick", function() print(groupStructure[#groupStructure]) end)
-        scrollFrame:AddChild(button)
-    end
 end
 
+-- ------------------------------------------------------------------
+-- Edit tab
+-- ------------------------------------------------------------------
+foo = {} -- TODO: TMP - replace w/ options db
 options.tab[consts.tabs.EDIT] = function(container)
     local treeGroup = AG:Create("TreeGroup")
-    treeGroup:SetLayout("Fill")
+    treeGroup:SetLayout("Flow")
     treeGroup:SetTree(PopulateTree())
-    treeGroup:SetCallback("OnGroupSelected", OnGroupSelected)
-    --[[
-    local status = { -- TODO: the structure needs to match the tree structure (keys must match as well) - true indicates that the branch is expanded
-        groups = {
-            ["1"] = true,
-            ["2"] = true,
-            ["3"] = true,
-            ["4"] = true,
-        },
-    }
-    treeGroup:SetStatusTable(status)
-    treeGroup:RefreshTree() -- to expand entries / scroll to appropriate positions etc
-    --]]
+    treeGroup:SetCallback("OnGroupSelected", OnTreeSelect)
+    
+    treeGroup:SetStatusTable(foo)
+    if foo.selected then
+        -- propagate the selected group
+        OnTreeSelect(treeGroup, nil, foo.selected)
+    end
+    treeGroup:RefreshTree()
     
     --[[ TODO: figure out how to add expand all & collapse all buttons
     local expandAll = AG:Create("Button")

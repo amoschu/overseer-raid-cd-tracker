@@ -2,10 +2,8 @@
 local addon = Overseer
 local options = addon:NewModule(addon.OPTIONS_MODULE)
 local ME = addon:GetName()
-local ACR = LibStub("AceConfigRegistry-3.0") -- need?
 local ACD = LibStub("AceConfigDialog-3.0") -- need?
 local AG = LibStub("AceGUI-3.0")
-local ADO = LibStub("AceDBOptions-3.0") -- need?
 
 -- ------------------------------------------------------------------
 -- Option structures
@@ -14,6 +12,8 @@ options.consts = {
     tabs = {
         NEW = "NEW",
         EDIT = "EDIT",
+        MISC = "MISC",
+        PROFILES = "PROFILES",
     },
 }
 
@@ -31,8 +31,11 @@ options.tab = {
 -- Window
 -- ------------------------------------------------------------------
 local function TabSelect(container, event, tab)
+    container:PauseLayout()
     container:ReleaseChildren()
     options.tab[tab](container)
+    container:ResumeLayout()
+    container:DoLayout()
 end
 
 local function OnSizeChanged(frame, width, height)
@@ -41,7 +44,28 @@ local function OnSizeChanged(frame, width, height)
 end
 
 local window
+local windowTabs = {
+    {
+        text = "New", -- TODO: localization
+        value = options.consts.tabs.NEW,
+    },
+    {
+        text = "Edit", -- TODO: localization, a better name
+        value = options.consts.tabs.EDIT,
+    },
+    {
+        text = "Misc", -- TODO: localization
+        value = options.consts.tabs.MISC,
+    },
+    {
+        text = "Profiles", -- TODO: localization
+        value = options.consts.tabs.PROFILES,
+    },
+}
 function options:OpenWindow()
+    -- TODO: hook GameMenuFrame Show => Hide window if open
+
+    --[[ TODO: OLD - manually creating stuff with AceGUI
     if not window then
         window = AG:Create("Window")
         window:SetTitle(("|c%s%s|r"):format(addon.NAME_COLOR, ME))
@@ -61,25 +85,10 @@ function options:OpenWindow()
         )
         
         local tabGroup = AG:Create("TabGroup")
-        tabGroup:SetLayout("Flow")
-        tabGroup:SetTabs({
-            {
-                text = "New",
-                value = options.consts.tabs.NEW,
-            },
-            {
-                text = "Edit", -- TODO: a better name
-                value = options.consts.tabs.EDIT,
-            },
-            --[[
-            {
-                text = "Misc", ? -- some kind of meta type stuff (clamped, show alerts, etc)
-            },
-            {
-                text = "Profiles",
-            },
-            --]]
-        })
+        tabGroup:SetFullWidth(true)
+        tabGroup:SetFullHeight(true)
+        tabGroup:SetLayout("Fill")
+        tabGroup:SetTabs(windowTabs)
         tabGroup:SetCallback("OnGroupSelected", TabSelect)
         tabGroup:SelectTab(options.consts.tabs.NEW) -- TODO: read from db
         window:AddChild(tabGroup)
@@ -87,6 +96,7 @@ function options:OpenWindow()
         -- if there is no .frame, AceGUI changed its internal structure
         window.frame:SetScript("OnSizeChanged", OnSizeChanged)
     end
+    --]]
 end
 
 addon:ScheduleTimer(options.OpenWindow, 10, options) -- TODO: TMP

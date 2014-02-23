@@ -4,6 +4,9 @@
     <!--@end-no-lib-strip@-->
 
 	<Script file="gui\OverseerOptions.lua"/>
+	<Script file="gui\Layouts.lua"/>
 	<Script file="gui\NewTab.lua"/>
 	<Script file="gui\EditTab.lua"/>
+	<Script file="gui\MiscTab.lua"/>
+	<Script file="gui\ProfilesTab.lua"/>
 </Ui>

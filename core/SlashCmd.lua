@@ -82,7 +82,7 @@ SLASH_OVERSEER1 = slash1
 SLASH_OVERSEER2 = slash2
 
 local splitString = {}
-local function split(str, delim)
+local function split(str, delim) -- TODO: just use 'strsplit'
 	wipe(splitString)	
 	if type(str) == "string" then
 		delim = delim or "%s+" -- default to whitespace
@@ -276,7 +276,7 @@ commands["l"] = commands["lock"]
 commands["cfg"] = commands["config"]
 
 function SlashCmdList.OVERSEER(msg)
-	msg = msg:lower()
+	msg = msg and msg:lower()
 	local args = split(msg)
 	local cmd = remove(args, 1)
 	
