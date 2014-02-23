@@ -1,6 +1,6 @@
 
-local select, wipe, type, tostring, next, inf, abs, min, max, ceil, floor, remove, sort
-	= select, wipe, type, tostring, next, math.huge, math.abs, math.min, math.max, math.ceil, math.floor, table.remove, table.sort
+local select, wipe, type, tostring, next, inf, abs, min, max, ceil, floor, remove, sort, concat
+	= select, wipe, type, tostring, next, math.huge, math.abs, math.min, math.max, math.ceil, math.floor, table.remove, table.sort, table.concat
 local CreateFrame
 	= CreateFrame
 
@@ -490,6 +490,17 @@ local function ResizeParent(parent)
 	end
 end
 
+local function AlreadyVisited(visited, childId)
+    local result
+    for i = 1, #visited do
+        if visited[i] == childId then
+            result = true
+            break
+        end
+    end
+    return result
+end
+
 -- spawns a group's parents up to the root parent
 --[[
 -- eg: spell spawns E -> spawns C -> spawns A -> ...
@@ -523,7 +534,14 @@ end
 			[F] = ...
 		}
 --]]
-local function SpawnGroups(childId, child)
+local function SpawnGroups(childId, child, visited)
+    visited = visited or {}
+    if AlreadyVisited(visited, childId) then
+        addon:Debug(("SpawnGroups(%s): Cyclic reference detected! (%s)"):format(childId, concat(visited, "->")))
+        return
+    end
+    append(visited, childId)
+
 	local groupDB = addon.db:GetGroupOptions()
 	for groupId, groupOptions in next, groupDB do
 		-- no need to check if a group is a parent of itself
@@ -553,7 +571,7 @@ local function SpawnGroups(childId, child)
 					-- resize the parent based on its children's positioning
 					ResizeParent(parentGroup)
 					-- spawn the parent's parents (if any)
-					SpawnGroups(groupId, parentGroup)
+					SpawnGroups(groupId, parentGroup, visited)
 				end
 				
 				-- a display can only be a child of a single group
@@ -610,7 +628,14 @@ local function RemoveChild(parent, child)
 end
 
 -- reverse of SpawnGroups
-local function DespawnGroups(childId, child)
+local function DespawnGroups(childId, child, visited)
+    visited = visited or {}
+    if AlreadyVisited(visited, childId) then
+        addon:Debug(("DespawnGroups(%s): Cyclic reference detected! (%s)"):format(childId, concat(visited, "->")))
+        return
+    end
+    append(visited, childId)
+    
 	local groupDB = addon.db:GetGroupOptions()
 	for groupId, groupOptions in next, groupDB do
 		if groupId ~= childId and groupId ~= GROUP_ID_INVALID then
@@ -629,7 +654,7 @@ local function DespawnGroups(childId, child)
 							-- parent is now empty
 							DestroyGroup(groupId)
 							-- check if grandparent is empty
-							DespawnGroups(groupId, parentGroup)
+							DespawnGroups(groupId, parentGroup, visited)
 						end
 					end
 					
