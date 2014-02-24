@@ -319,6 +319,7 @@ end
 
 -- randomly fires twice sometimes? ..blah
 function addon:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellname, _, _, spellid)
+    self:PrintFunction(event..": "..UnitClassColoredName(unit).." -> "..spellname.." ("..spellid..")")
 	if not self.isFightingBoss then
         if IsSpecActivation(unit, spellid) or IsTalentChange(unit, spellid) or IsGlyphChange(unit, spellid) then
             InspectUnitAfterDelay(unit)
@@ -326,9 +327,9 @@ function addon:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellname, _, _, spellid)
             self:PrintFunction(("UNIT_SPELLCAST_SUCCEEDED(%s): needs retry so: trying |cffFF00FFinspect|r again.."):format(UnitClassColoredName(unit)))
             self:Inspect(unit, true)
         end
-	else
-		UnitCastSpell(unit, spellid, spellname)
 	end
+    
+    UnitCastSpell(unit, spellid, spellname)
 end
 
 -- ------------------------------------------------------------------
