@@ -431,7 +431,7 @@ local function GetBar(spellCD, display)
 	local height = barDB.height
 	local orientation = barDB.orientation
 	
-	local bar = LCB:New(texture, width, height)
+	local bar = LCB:New(LSM:Fetch(MEDIA_TYPES.STATUSBAR, texture), width, height)
 	local statusbar = bar.candyBarBar
 	local label = bar.candyBarLabel
 	local duration = bar.candyBarDuration
@@ -442,7 +442,9 @@ local function GetBar(spellCD, display)
 	statusbar:SetOrientation(orientation)
 	statusbar:SetRotatesTexture(orientation == "VERTICAL" and true or false)
 	
-	bar.candyBarBackground:SetVertexColor(GetColorFromDB(barDB.bg, spellCD))
+    local r,g,b,a = GetColorFromDB(barDB.bg, spellCD)
+    a = a == 1 and 0.5 or a
+	bar.candyBarBackground:SetVertexColor(r, g, b, a)
 	
 	-- modify the fonts
 	local point, relPoint
@@ -452,7 +454,7 @@ local function GetBar(spellCD, display)
 		local labelSize = addon.db:LookupFont(labelDB, spellCD.spellid, "size")
 		local labelFlags = addon.db:LookupFont(labelDB, spellCD.spellid, "flags")
 		
-		label:SetFont(labelFont, labelSize, labelFlags)
+		label:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, labelFont), labelSize, labelFlags)
 		label:SetTextColor(GetColorFromDB(labelDB, spellCD))
 		label:SetJustifyH(addon.db:LookupFont(labelDB, spellCD.spellid, "justifyH"))
 		label:SetJustifyV(addon.db:LookupFont(labelDB, spellCD.spellid, "justifyV"))
@@ -476,7 +478,7 @@ local function GetBar(spellCD, display)
 		local durationSize = addon.db:LookupFont(durationDB, spellCD.spellid, "size")
 		local durationFlags = addon.db:LookupFont(durationDB, spellCD.spellid, "flags")
 		
-		duration:SetFont(durationFont, durationSize, durationFlags)
+		duration:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, durationFont), durationSize, durationFlags)
 		duration:SetTextColor(GetColorFromDB(durationDB, spellCD))
 		duration:SetJustifyH(addon.db:LookupFont(durationDB, spellCD.spellid, "justifyH"))
 		duration:SetJustifyH(addon.db:LookupFont(durationDB, spellCD.spellid, "justifyV"))
@@ -535,7 +537,7 @@ local function SetIcon(bar, spellCD)
 end
 
 local function SetPosition(bar, db, display, posIdx)
-	local shrink = (db.icon.shown and db.bar.fitIcon) and db.bar.shrink or 0
+	local adjust = (db.icon.shown and db.bar.fitIcon) and db.bar.adjust or 0
 	
 	-- determine where to place the bar
 	local numBarsRunning = posIdx or GetNumBarsRunning(display)
@@ -557,17 +559,17 @@ local function SetPosition(bar, db, display, posIdx)
 	-- TODO? animate ?
 	local side = db.bar.side -- only really applies when 'fitIcon' is true, but should work regardless
 	if side == "LEFT" then
-		bar:SetPoint("TOPRIGHT", display, "TOPLEFT", xOff, yOff - shrink)
-		bar:SetPoint("BOTTOMRIGHT", display, "BOTTOMLEFT", xOff, yOff + shrink)
+		bar:SetPoint("TOPRIGHT", display, "TOPLEFT", xOff, yOff + adjust)
+		bar:SetPoint("BOTTOMRIGHT", display, "BOTTOMLEFT", xOff, yOff - adjust)
 	elseif side == "RIGHT" then
-		bar:SetPoint("TOPLEFT", display, "TOPRIGHT", xOff, yOff - shrink)
-		bar:SetPoint("BOTTOMLEFT", display, "BOTTOMRIGHT", xOff, yOff + shrink)
+		bar:SetPoint("TOPLEFT", display, "TOPRIGHT", xOff, yOff + adjust)
+		bar:SetPoint("BOTTOMLEFT", display, "BOTTOMRIGHT", xOff, yOff - adjust)
 	elseif side == "TOP" then
-		bar:SetPoint("BOTTOMLEFT", display, "TOPLEFT", xOff + shrink, yOff)
-		bar:SetPoint("BOTTOMRIGHT", display, "TOPRIGHT", xOff - shrink, yOff)
+		bar:SetPoint("BOTTOMLEFT", display, "TOPLEFT", xOff - adjust, yOff)
+		bar:SetPoint("BOTTOMRIGHT", display, "TOPRIGHT", xOff + adjust, yOff)
 	elseif side == "BOTTOM" then
-		bar:SetPoint("TOPLEFT", display, "BOTTOMLEFT", xOff + shrink, yOff)
-		bar:SetPoint("TOPRIGHT", display, "BOTTOMRIGHT", xOff - shrink, yOff)
+		bar:SetPoint("TOPLEFT", display, "BOTTOMLEFT", xOff - adjust, yOff)
+		bar:SetPoint("TOPRIGHT", display, "BOTTOMRIGHT", xOff + adjust, yOff)
 	end
 end
 
@@ -763,6 +765,7 @@ end
 -- OnUse
 -- ------------------------------------------------------------------
 Bars[MESSAGES.DISPLAY_USE] = function(self, msg, spellCD, display)
+    addon:Print(msg..": "..tostring(spellCD))
     -- try to start a buff duration bar
     if not StartBuffDurationCountdown(spellCD, display) then
         -- try to start a cooldown bar for this spellCD use
@@ -811,7 +814,9 @@ Bars[MESSAGES.DISPLAY_COLOR_UPDATE] = function(self, msg, spellCD, display)
 		local barDB = db.bar
 		
 		bar:SetColor(GetColorFromDB(barDB.bar, spellCD))
-		bar.candyBarBackground:SetVertexColor(GetColorFromDB(barDB.bg, spellCD))
+        local r,g,b,a = GetColorFromDB(barDB.bg, spellCD)
+        a = a == 1 and 0.5 or a
+		bar.candyBarBackground:SetVertexColor(r, g, b, a)
 		bar.candyBarLabel:SetTextColor(GetColorFromDB(barDB.label, spellCD))
 		bar.candyBarDuration:SetTextColor(GetColorFromDB(barDB.duration, spellCD))
 	end

@@ -131,7 +131,7 @@ local function GetFrame(spellCD)
 	SizableObject:Embed(frame)
 	
 	frame:SetSize(db.icon.width, db.icon.height) -- TODO: separate from icon? is there a need?
-	frame:SetAlpha(db.alpha)
+	frame:SetAlpha(db.alpha); print(tostring(spellCD)..": alpha="..frame:GetAlpha())
 	frame:SetScale(db.scale)
 	frame:SetFrameStrata(db.strata)
 	frame:SetFrameLevel(db.frameLevel)

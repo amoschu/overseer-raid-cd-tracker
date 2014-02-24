@@ -1,6 +1,6 @@
 
-local tostring, type, floor
-	= tostring, type, math.floor
+local wipe, select, tostring, type, floor
+	= wipe, select, tostring, type, math.floor
 local UIParent
 	= UIParent
 	
@@ -16,6 +16,7 @@ local db = {
 	houses convenience database methods
 	the actual database is stored in '.Database'
 	--]]
+    DEFAULT_KEY = "**",
 }
 addon.db = db
 
@@ -25,9 +26,6 @@ addon.db = db
 local defaults = {}
 local spellDefaults = {}
 do -- setup default table
-	local LSM = LibStub("LibSharedMedia-3.0")
-	local MediaType = LSM.MediaType
-	
 	local ESC_SEQUENCES = consts.ESC_SEQUENCES
 	local GROUP_TYPES = consts.GROUP_TYPES
 	
@@ -39,6 +37,7 @@ do -- setup default table
 			dead = false,
 			offline = false,
 			benched = false,
+            -- TODO? ooc, nonboss fight ?
 		},
 		unique = false,
 		-- position information
@@ -57,7 +56,7 @@ do -- setup default table
 		--
 		mouseFeedback = true, -- TODO: remove
 		font = { -- default font settings
-			font = LSM:Fetch(MediaType.FONT, "Friz Quadrata TT"),
+			font = "Friz Quadrata TT",
 			size = 12,
 			flags = "OUTLINE",
 			r = 1.0,
@@ -102,11 +101,11 @@ do -- setup default table
 			limit = 1, -- limit of bars that can run simultaneously (0 means no limit)
 			grow = "LEFT", -- only applies to unique bars
 			fill = false,
-			texture = LSM:Fetch(MediaType.STATUSBAR, "Hal M"),
+			texture = "Hal M",
 			orientation = "VERTICAL",
 			fitIcon = true,
 			side = "LEFT",
-			shrink = 1, -- amount of pixels to shrink the fit dimension (based on 'fitIcon' and 'side')
+			adjust = -1, -- amount of pixels to adjust the fit dimension (based on 'fitIcon' and 'side')
 			width = 5,
 			height = 5, -- based on 'fitIcon' and 'side', one of the dimensions will not be considered
 			spacing = 3,
@@ -155,6 +154,7 @@ do -- setup default table
 		texts = {
 			{ -- number of cooldowns that can be casted
 				enabled = true,
+                name = "Number Castable",
 				groupText = false,
 				point = "BOTTOMRIGHT",
 				relPoint = "BOTTOMRIGHT",
@@ -171,6 +171,7 @@ do -- setup default table
 			},
 			{ -- list of people who can cast spell or first on cd if none
 				enabled = true,
+                name = "Names Castable",
 				groupText = false,
 				point = "BOTTOMLEFT",
 				relPoint = "BOTTOMRIGHT",
@@ -183,6 +184,7 @@ do -- setup default table
 			},
 			{ -- caster of active buff
 				enabled = true,
+                name = "Active Name",
 				groupText = false,
 				point = "TOPLEFT",
 				relPoint = "TOPRIGHT",
@@ -202,7 +204,7 @@ do -- setup default table
 		minWidth = 18,
 		minHeight = 18,
 		spells = {
-			["**"] = spellDefaults,
+			[db.DEFAULT_KEY] = spellDefaults,
 			
 			-- override ankh text to be more useful
 			[20608] = {
@@ -415,18 +417,29 @@ local function GetDatabase()
 	return addon.db.Database
 end
 
-local function LoadUserDefaults()
+local UnitName, GetRealmName = UnitName, GetRealmName
+local function LoadUserDefaults(profile)
 	-- override the hard-coded defaults with user specified defaults
 	-- note: this prevents any change to the hard-coded defaults from being reflected in-game (if there are saved changes to the defaults)
-	local userDefaults = db:GetProfile().spells["**"] -- this will inherit from the hard-coded defaults if there are no user defaults which is not actually a problem
-	if userDefaults then
-		defaults.profile.spells["**"] = userDefaults
-		db.Database:RegisterDefaults(defaults)
-	end
+    local OverseerDB = OverseerDB
+    if OverseerDB then
+        if not profile then
+            -- TODO: look up through AceDB
+            local playerName = UnitName("player")
+            local realmName = GetRealmName("player")
+            profile = OverseerDB.profileKeys and OverseerDB.profileKeys[ ("%s - %s"):format(playerName, realmName) ] or "Default"
+        end
+        
+        local userDefaults = OverseerDB.profiles and OverseerDB.profiles[profile].spells[db.DEFAULT_KEY]
+        if userDefaults then
+            defaults.profile.spells[db.DEFAULT_KEY] = userDefaults
+            db.Database:RegisterDefaults(defaults)
+        end
+    end
 end
 
-local function RestoreHardCodedDefaults()
-	defaults.profile.spells["**"] = spellDefaults
+local function RestoreHardCodedDefaults(profile)
+	defaults.profile.spells[db.DEFAULT_KEY] = spellDefaults
 	db.Database:RegisterDefaults(defaults)
 end
 
@@ -438,14 +451,18 @@ if true then -- TODO: DELETE ..when the time is right!! (this is probably going 
 		LoadUserDefaults()
 		-- TODO: prune the database of any group tables where .id==GROUP_ID_INVALID ..how would this happen?
 end --
-		
-		local function OnProfileUpdate()
-			LoadUserDefaults()
+
+		local function OnProfileUpdate(profile)
+			LoadUserDefaults(profile)
 			addon:SendMessage(MESSAGES.PROFILE_UPDATE)
 		end
-		db.Database.RegisterCallback(self, "OnProfileChanged", OnProfileUpdate)
-		db.Database.RegisterCallback(self, "OnProfileCopied", OnProfileUpdate)
-		db.Database.RegisterCallback(self, "OnProfileReset", OnProfileUpdate)
+        local function OnProfileReset(profile)
+            RestoreHardCodedDefaults(profile)
+			addon:SendMessage(MESSAGES.PROFILE_UPDATE)
+        end
+		db.Database.RegisterCallback(self, "OnProfileChanged", OnProfileUpdate, profile)
+		db.Database.RegisterCallback(self, "OnProfileCopied", OnProfileUpdate, profile)
+		db.Database.RegisterCallback(self, "OnProfileReset", OnProfileReset, profile)
 		
 		GetDefaults = nil
 	end
@@ -466,7 +483,7 @@ end
 
 function db:GetDefaultSettings()
     local profile = self:GetProfile()
-    return profile.spells["**"]
+    return profile.spells[db.DEFAULT_KEY]
 end
 
 function db:GetSpellSettings(key)
@@ -557,4 +574,30 @@ function db:SaveIconSize(key, width, height)
 	local icon = GetDatabase().profile.spells[key].icon
 	icon.width = width
 	icon.height = height
+end
+
+local keys = {}
+-- '...' should be the keys to-be traversed to reach the 'dbKey' element
+function db:SaveDefaultSetting(dbKey, oldVal, newVal, ...)
+    wipe(keys)
+    local numKeys = select("#", ...)
+    for i = 1, numKeys do
+        keys[i] = select(i, ...)
+    end
+    
+    local profile = self:GetProfile()
+    for spellid, spellDB in next, profile.spells do
+        if type(spellid) == "number" then
+            local setting = spellDB
+            for i = 1, #keys do
+                -- traverse the tree
+                setting = setting[keys[i]]
+            end
+        
+            if setting[dbKey] == oldVal then -- TODO: meta option to allow defaults to override values which have been overridden
+                -- inherit the new default value
+                setting[dbKey] = newVal
+            end
+        end
+    end
 end

@@ -5,6 +5,7 @@ local GetTime
 	= GetTime
 
 local addon = Overseer
+local LSM = LibStub("LibSharedMedia-3.0")
 
 local consts = addon.consts
 local append = addon.TableAppend
@@ -15,6 +16,7 @@ local GUIDClassColoredName = addon.GUIDClassColoredName
 local GroupCache = addon.GroupCache
 local Cooldowns = addon.Cooldowns
 
+local MEDIA_TYPES = LSM.MediaType
 local INDENT = consts.INDENT
 local BREZ_IDS = consts.BREZ_IDS
 local MSG = consts.MESSAGES
@@ -559,7 +561,7 @@ local function GetTexts(spellCD, parent)
 				end
 				textElement:ClearAllPoints()
 				textElement:SetPoint(textData.point, parent, textData.relPoint, textData.x, textData.y)
-				textElement:SetFont(font, fontSize, fontFlags)
+				textElement:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, font), fontSize, fontFlags)
 				textElement:SetJustifyH(justifyH)
 				textElement:SetJustifyV(justifyV)
 				textElement:SetTextColor(fontR, fontG, fontB, 1)

@@ -4,7 +4,7 @@
     <!--@end-no-lib-strip@-->
 
 	<Script file="gui\OverseerOptions.lua"/>
-	<Script file="gui\Layouts.lua"/> <!-- TODO: remove this -->
+	<Script file="gui\OptionsTable.lua"/>
 	<Script file="gui\NewTab.lua"/>
 	<Script file="gui\EditTab.lua"/>
 	<Script file="gui\MiscTab.lua"/>

@@ -63,7 +63,8 @@ local windowTabs = {
 }
 local registered
 function options:OpenWindow()
-    -- TODO: hook GameMenuFrame Show => Hide window if open
+    -- TODO: hook GameMenuFrame, InterfaceOptionsFrame, HelpFrame, VideoOptionsFrame Show => Hide window if open
+    --      -> possible to reopen when the above hide?
     
     if not window then
         window = AG:Create("Window")

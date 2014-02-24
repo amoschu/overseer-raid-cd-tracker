@@ -82,7 +82,7 @@ local function DesaturateIfNoneCastable(icon, display, triggerSpell)
                 if _DEBUG_DESAT then
                     if not valid then
                         local dead = GroupCache:IsDead(guid) and "Dead" or ""
-                        local offline = GroupCache:IsDead(guid) and "Offline" or ""
+                        local offline = GroupCache:IsOffline(guid) and "Offline" or ""
                         local benched = GroupCache:IsBenched(guid) and "Benched" or ""
                         addon:Debug(("->%s invalid: %s%s%s"):format(tostring(spell), dead, offline, benched))
                     end
