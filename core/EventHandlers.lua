@@ -319,7 +319,6 @@ end
 
 -- randomly fires twice sometimes? ..blah
 function addon:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellname, _, _, spellid)
-    self:PrintFunction(event..": "..UnitClassColoredName(unit).." -> "..spellname.." ("..spellid..")")
 	if not self.isFightingBoss then
         if IsSpecActivation(unit, spellid) or IsTalentChange(unit, spellid) or IsGlyphChange(unit, spellid) then
             InspectUnitAfterDelay(unit)
