@@ -535,8 +535,6 @@ local function GetTexts(spellCD, parent)
 				local fontFlags = addon.db:LookupFont(textData, spellid, "flags")
 				local justifyH = addon.db:LookupFont(textData, spellid, "justifyH")
 				local justifyV = addon.db:LookupFont(textData, spellid, "justifyV")
-				local shadowX = addon.db:LookupFont(textData, spellid, "shadowX")
-				local shadowY = addon.db:LookupFont(textData, spellid, "shadowY")
 				
 				if useClassColor then
 					-- may not make much sense for consolidated displays (will use the spellCD that spawned the display's class color)
@@ -561,19 +559,14 @@ local function GetTexts(spellCD, parent)
 				end
 				textElement:ClearAllPoints()
 				textElement:SetPoint(textData.point, parent, textData.relPoint, textData.x, textData.y)
-				textElement:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, font), fontSize, fontFlags)
+				textElement:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, font), fontSize, fontFlags) -- will not set the size > 24
+                textElement:SetTextHeight(fontSize) -- this will scale the drawn text if > 24
 				textElement:SetJustifyH(justifyH)
 				textElement:SetJustifyV(justifyV)
 				textElement:SetTextColor(fontR, fontG, fontB, 1)
-				textElement:SetShadowOffset(shadowX, shadowY)
-				local sr, sg, sb, sa = 0, 0, 0, 0
-				if addon.db:LookupFont(textData, spellid, "shadow") then
-					sr = addon.db:LookupFont(textData, spellid, "shadowR")
-					sg = addon.db:LookupFont(textData, spellid, "shadowG")
-					sb = addon.db:LookupFont(textData, spellid, "shadowB")
-					sa = addon.db:LookupFont(textData, spellid, "shadowA")
-				end
-				textElement:SetShadowColor(sr, sg, sb, sa)
+				local sa = addon.db:LookupFont(textData, spellid, "shadow") and 1 or 0
+				textElement:SetShadowColor(0, 0, 0, sa)
+                textElement:SetShadowOffset(1, -1)
 				
 				-- cache some data on the fontstring so it does not have to be looked up again
 				textElement.groupText = textData.groupText

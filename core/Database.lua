@@ -66,15 +66,10 @@ do -- setup default table
 			notUsableG = 0.6,
 			notUsableB = 0.6, -- TODO: colors for dead/offl/benched/oncd
 			shadow = false,
-			shadowX = 2,
-			shadowY = -2,
-			shadowR = 0,
-			shadowG = 0,
-			shadowB = 0,
-			shadowA = 1,
 			justifyH = "LEFT",
-			justifyV = "CENTER",
+			justifyV = "MIDDLE",
 			useClassColor = false,
+            enableUnusableColor = true,
 		}, --
 		icon = { -- TODO? allow user to turn off icons? displayGroup logic becomes super shitty with bars
 			shown = true,

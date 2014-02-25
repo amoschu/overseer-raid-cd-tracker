@@ -458,10 +458,9 @@ local function GetBar(spellCD, display)
 		label:SetTextColor(GetColorFromDB(labelDB, spellCD))
 		label:SetJustifyH(addon.db:LookupFont(labelDB, spellCD.spellid, "justifyH"))
 		label:SetJustifyV(addon.db:LookupFont(labelDB, spellCD.spellid, "justifyV"))
-		label:SetShadowOffset(
-			addon.db:LookupFont(labelDB, spellCD.spellid, "shadowX"), 
-			addon.db:LookupFont(labelDB, spellCD.spellid, "shadowY"))
-		label:SetShadowColor(GetFontShadowColorFromDB(labelDB, spellCD))
+        local sa = addon.db:LookupFont(labelDB, spellCD.spellid, "shadow") and 1 or 0
+        label:SetShadowColor(0, 0, 0, sa)
+        label:SetShadowOffset(1, -1)
 		if orientation == "VERTICAL" then
 			point = labelDB.point or "LEFT"
 			relPoint = labelDB.relPoint or "CENTER"
@@ -482,10 +481,9 @@ local function GetBar(spellCD, display)
 		duration:SetTextColor(GetColorFromDB(durationDB, spellCD))
 		duration:SetJustifyH(addon.db:LookupFont(durationDB, spellCD.spellid, "justifyH"))
 		duration:SetJustifyH(addon.db:LookupFont(durationDB, spellCD.spellid, "justifyV"))
-		duration:SetShadowOffset(
-			addon.db:LookupFont(durationDB, spellCD.spellid, "shadowX"), 
-			addon.db:LookupFont(durationDB, spellCD.spellid, "shadowY"))
-		duration:SetShadowColor(GetFontShadowColorFromDB(durationDB, spellCD))
+        local sa = addon.db:LookupFont(durationDB, spellCD.spellid, "shadow") and 1 or 0
+        duration:SetShadowColor(0, 0, 0, sa)
+        duration:SetShadowOffset(1, -1)
 		if orientation == "VERTICAL" then
 			point = durationDB.point or "CENTER"
 			relPoint = durationDB.relPoint or "TOP"

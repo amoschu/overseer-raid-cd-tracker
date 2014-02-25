@@ -55,6 +55,22 @@ local ORIENTATION = {
     VERTICAL = "VERTICAL",
     HORIZONTAL = "HORIZONTAL",
 }
+local JUSTIFYH = {
+    CENTER = "CENTER",
+    LEFT = "LEFT",
+    RIGHT = "RIGHT",
+}
+local JUSTIFYV = {
+    BOTTOM = "BOTTOM",
+    MIDDLE = "MIDDLE",
+    TOP = "TOP",
+}
+local FONTFLAGS = {
+    NONE = "NONE",
+    MONOCHROME = "MONOCHROME",
+    OUTLINE = "OUTLINE",
+    THICKOUTLINE = "THICKOUTLINE",
+}
 local valueToText = {
     --[[
     flat table pairing values to their displayed text in the tree
@@ -1136,21 +1152,126 @@ DrawSelection["defaults"] = function(id, container)
                                 --]]
                             },
                         },
-                        texts = {
-                            name = "Texts", -- TODO: localization
+                        font = {
+                            name = "Font", -- TODO: localization
                             type = "group",
-                            childGroups = "select",
                             order = 3,
                             disabled = function(info)
                                 return not db.shown
                             end,
+                            set = function(info, val)
+                                local element = info[#info]
+                                local fontDB = db.font
+                                local oldVal = fontDB[element]
+                                fontDB[element]= val
+                                
+                                addon.db:SaveDefaultSetting(element, oldVal, val, "font")
+                                -- TODO: set every font.element to nil
+                            end,
+                            get = function(info)
+                                local element = info[#info]
+                                return db.font[element]
+                            end,
                             args = {
-                                -- TODO: font stuff
-                                header = {
-                                    name = "",
-                                    type = "header",
-                                    order = 50,
+                                font = {
+                                    name = "Default Font",
+                                    desc = "Set the default font",
+                                    type = "select",
+                                    dialogControl = "LSM30_Font",
+                                    values = LSM:HashTable(MediaType.FONT),
+                                    width = "normal",
+                                    order = 0,
                                 },
+                                shadow = {
+                                    name = "Font Shadow",
+                                    desc = "Enable/disable font shadow",
+                                    type = "toggle",
+                                    width = "normal",
+                                    order = 1,
+                                },
+                                size = {
+                                    name = "Default Font Size",
+                                    desc = "Set the default font size",
+                                    type = "range",
+                                    min = 1,
+                                    softMax = 24,
+                                    bigStep = 1,
+                                    width = "normal",
+                                    order = 2,
+                                },
+                                flags = {
+                                    name = "Default Font Flags",
+                                    desc = "Set the default font flags",
+                                    type = "select",
+                                    values = FONTFLAGS,
+                                    width = "normal",
+                                    order = 3,
+                                },
+                                justifyH = {
+                                    name = "Horizontal Alignment",
+                                    desc = "Set the default horizontal text alignment",
+                                    type = "select",
+                                    values = JUSTIFYH,
+                                    width = "normal",
+                                    order = 4,
+                                },
+                                justifyV = {
+                                    name = "Vertical Alignment",
+                                    desc = "Set the default vertical text alignment",
+                                    type = "select",
+                                    values = JUSTIFYV,
+                                    width = "normal",
+                                    order = 5,
+                                },
+                                useClassColor = {
+                                    name = "Use Class Color",
+                                    desc = "Color the text with the caster's class color (this overrides any manually set text color)",
+                                    type = "toggle",
+                                    width = "normal",
+                                    order = 6,
+                                },
+                                textColor = {
+                                    name = "Text Color",
+                                    desc = "Set the default text color",
+                                    type = "color",
+                                    width = "normal",
+                                    order = 7,
+                                    disabled = function(info)
+                                        return db.font.useClassColor
+                                    end,
+                                    set = function(info, r, g, b)
+                                        local fontDB = db.font
+                                        local oldR = fontDB.r
+                                        local oldG = fontDB.g
+                                        local oldB = fontDB.b
+                                        
+                                        fontDB.r = r -- TODO: create a Database wrapper to set color/alpha
+                                        fontDB.g = g
+                                        fontDB.b = b
+                                        
+                                        addon.db:SaveDefaultSetting("r", oldR, r, "font")
+                                        addon.db:SaveDefaultSetting("g", oldG, g, "font")
+                                        addon.db:SaveDefaultSetting("b", oldB, b, "font")
+                                        -- TODO: broadcast a message or something so that active display elements update
+                                    end,
+                                    get = function(info)
+                                        local fontDB = db.font
+                                        return fontDB.r, fontDB.g, fontDB.b
+                                    end,
+                                },
+                                
+                                
+                            },
+                        },
+                        texts = {
+                            name = "Texts", -- TODO: localization
+                            type = "group",
+                            childGroups = "select",
+                            order = 4,
+                            disabled = function(info)
+                                return not db.shown
+                            end,
+                            args = {
                                 create = {
                                     name = "New Text",
                                     desc = "Create a new text element",
