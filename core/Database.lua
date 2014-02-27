@@ -149,7 +149,7 @@ do -- setup default table
 		texts = {
 			{ -- number of cooldowns that can be casted
 				enabled = true,
-                name = "Number Castable",
+                name = "Number Castable", -- gui
 				groupText = false,
 				point = "BOTTOMRIGHT",
 				relPoint = "BOTTOMRIGHT",
@@ -157,6 +157,7 @@ do -- setup default table
 				y = 0,
 				-- value = ESC_SEQUENCES.NUM_READY,
 				value = ESC_SEQUENCES.NUM_CASTABLE,
+                isCustom = false, -- gui
 				size = 20,
 				r = 0.0,
 				g = 1.0,
@@ -166,7 +167,7 @@ do -- setup default table
 			},
 			{ -- list of people who can cast spell or first on cd if none
 				enabled = true,
-                name = "Names Castable",
+                name = "Names Castable", -- gui
 				groupText = false,
 				point = "BOTTOMLEFT",
 				relPoint = "BOTTOMRIGHT",
@@ -174,18 +175,20 @@ do -- setup default table
 				y = -2,
 				-- value = ESC_SEQUENCES.NAMES_READY .. "%{if=0, "..ESC_SEQUENCES.NAMES_FIRST_TO_EXPIRE.."}",
 				value = ESC_SEQUENCES.NAMES_USABLE .. "%{if=0, "..ESC_SEQUENCES.NAMES_FIRST_TO_EXPIRE.."}",
+                isCustom = true, -- gui
 				size = 14,
 				useClassColor = true,
 			},
 			{ -- caster of active buff
 				enabled = true,
-                name = "Active Name",
+                name = "Active Name", -- gui
 				groupText = false,
 				point = "TOPLEFT",
 				relPoint = "TOPRIGHT",
 				x = 3,
 				y = 5,
 				value = ESC_SEQUENCES.NAMES_MOST_RECENT_ACTIVE,
+                isCustom = false, -- gui
 				size = 14,
 				useClassColor = true,
 			},
@@ -211,7 +214,7 @@ do -- setup default table
 						value = ESC_SEQUENCES.NAMES_READY,
 					},
 					{ -- first on cd
-						enabled = false,
+                        value = ESC_SEQUENCES.NAMES_ONCD,
 					},
 				},
 			},
