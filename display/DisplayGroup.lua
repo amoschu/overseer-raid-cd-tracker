@@ -266,7 +266,7 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 	local lastX, lastY = childX, childY -- the previous iteration's x, y offset after it has been repositioned
 	local lastWidth, lastHeight = 0, 0 -- the previous iteration's width, height (depending on growth direction)
 	-- reposition other children in case this child shifted their positioning
-	for i = position+1, #byPosition do
+	for i = position+1, #byPosition do -- TODO: '#byPosition' is sometimes wrong.. (position+1 > #byPosition when it should not be)
 		local oldPosition = add and i - 1 or i
 		local curPosition = add and i or i - 1
 		local oldRow, oldCol = GetChildRowCol(grow, oldPosition, rows, cols)
@@ -274,8 +274,8 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 		-- determine how the added/removed child affected this one
 		-- the growth-direction dimension should be ±1 if not wrapping or ±(maxDim-1) if wrapping
 		-- the wrap-direction dimension should only ever be ±1 when wrapping (0 otherwise)
-		local diffRow = curRow - oldRow -- curRow
-		local diffCol = curCol - oldCol -- curCol
+		local diffRow = curRow - oldRow
+		local diffCol = curCol - oldCol
 		
 		local sibling = byPosition[i]
 		local pt, rel, relPt, xOff, yOff = sibling:GetPoint()
@@ -560,12 +560,12 @@ local function SpawnGroups(childId, child, visited)
 					-- addon:Debug(msg:format(childId, groupId))
 				end
 				
-				if _DEBUG_GROUPS then
-					addon:Debug(("%s> :|cff999999AddChild|r(): adding child id '%s' to parent '%s'"):format(_DEBUG_GROUPS_PREFIX, tostring(childId), groupId))
-				end
-				
 				-- only apply settings if this is the first time this child has been added
 				if AddChild(parentGroup, child, position) then
+                    if _DEBUG_GROUPS then
+                        addon:Debug(("%s> :|cff999999AddChild|r(): adding child id '%s' to parent '%s'"):format(_DEBUG_GROUPS_PREFIX, tostring(childId), groupId))
+                    end
+                    
 					--addon:Debug(">> Group: Add successful!!")
 					HandleDynamicSettings(child, parentGroup, groupOptions, true)
 					-- resize the parent based on its children's positioning
@@ -702,7 +702,6 @@ DisplayGroup[MESSAGES.DISPLAY_READY] = function(self, msg, spellCD, display)
 		-- TODO
 	end
 end
-
 -- ------------------------------------------------------------------
 -- OnDisplayReset - to catch positioning for displays which only show bars
 -- ------------------------------------------------------------------
@@ -711,4 +710,15 @@ DisplayGroup[MESSAGES.DISPLAY_RESET] = function(self, msg, spellCD, display)
 	if not db.icon.shown then
 		-- TODO
 	end
+end
+
+-- ------------------------------------------------------------------
+-- UI_SCALE_CHANGED - resize all groups
+-- ------------------------------------------------------------------
+function addon:UI_SCALE_CHANGED(event)
+    for groupId, group in next, DisplayGroup do
+        if type(group) == "table" then
+            ResizeParent(group)
+        end
+    end
 end
