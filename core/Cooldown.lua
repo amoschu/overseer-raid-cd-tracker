@@ -133,6 +133,7 @@ local function RemoveTrackedSpell(spellid, guid)
 	if spellCD then
 		-- update the reference first so that anyone responding to a :Delete message can lookup accurate information
 		Cooldowns[spellid][guid] = nil
+        CooldownsByGUID[guid][spellid] = nil
 		
 		spellCD:Delete()
 		append(deadCooldowns, spellCD) -- TODO: these are just tables, not sure if recycling them is necessary or wise
