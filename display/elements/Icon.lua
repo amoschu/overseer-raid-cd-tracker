@@ -48,6 +48,18 @@ local Icons = {
 local Elements = addon.DisplayElements
 Elements:Register(Icons, 2)
 
+Icons.RegisterMessage = addon.RegisterMessage
+Icons.UnregisterMessage = addon.UnregisterMessage
+function Icons:Initialize()
+    self:RegisterMessage(MESSAGES.OPT_DISPLAY_UPDATE, MESSAGES.OPT_DISPLAY_UPDATE)
+    self:RegisterMessage(MESSAGES.OPT_ICON_UPDATE, MESSAGES.OPT_ICON_UPDATE)
+end
+
+function Icons:Shutdown()
+    self:UnregisterMessage(MESSAGES.OPT_DISPLAY_UPDATE)
+    self:UnregisterMessage(MESSAGES.OPT_ICON_UPDATE)
+end
+
 -- ------------------------------------------------------------------
 -- Icon helpers
 -- ------------------------------------------------------------------
@@ -114,6 +126,8 @@ local function DesaturateIfNoneCastable(icon, display, triggerSpell)
 				icon.border.bg.desat = nil
 			end
 		end
+    else
+        SetDesaturation(icon.tex, false)
 	end
 end
 
@@ -151,44 +165,58 @@ local function OnIconSizeChange(icon, width, height)
 	icon.tex:SetTexCoord(widthZoom, 1 - widthZoom, heightZoom, 1 - heightZoom)
 end
 
-local cdFrameCounter = 0
-local COOLDOWN_FRAME_NAME = "Overseer_Cooldown_%d"
-local function GetIcon(spellCD, parent)
+local function ApplyIconSettings(icon, spellCD)
 	local db = addon.db:GetDisplaySettings(spellCD.spellid)
-	local icon = remove(deadIcons)
-	if not icon then
-		icon = CreateFrame(FRAME_TYPES.FRAME)
-		
-		-- this should catch initial sizing as well
-		if db.icon.autoCrop then
-			icon:SetScript("OnSizeChanged", OnIconSizeChange)
-		end
-		
-		-- note: the border is actually another frame that sits behind the icon that is 'borderSize' larger
-		local borderSize = db.icon.border.size or 1
-		cdFrameCounter = cdFrameCounter + 1 -- TODO: TMP - testing if this helps OmniCC see these
-		icon.border = CreateFrame(FRAME_TYPES.FRAME, COOLDOWN_FRAME_NAME:format(cdFrameCounter), icon)
-		icon.border:ClearAllPoints()
-		icon.border:SetPoint("TOPLEFT", -borderSize, borderSize)
-		icon.border:SetPoint("BOTTOMRIGHT", borderSize, -borderSize)
-		icon.border.bg = icon.border:CreateTexture(nil, "BACKGROUND", nil, -8)
-		icon.border.bg:SetAllPoints()
-		
-		icon.cd = CreateFrame(FRAME_TYPES.COOLDOWN, nil, icon)
-		icon.cd:SetAllPoints()
-		icon.tex = icon:CreateTexture(nil, "BACKGROUND", nil, -8)
-		icon.tex:SetNonBlocking(true) -- allow asynchronous texture loading (shouldn't matter in most? all? cases)
-		--icon.tex:SetTexCoord(0.25, 0.75, 0.25, 0.75) -- zoom = (z, 1-z, z, 1-z), where z = zoom %
-		--icon.tex:SetTexCoord(.07, 1-.07, .23, 1-.23)
-		icon.tex:SetAllPoints()
-	end
-	icon:SetParent(parent) -- must be set before frame strata is applied otherwise z-order is set arbitrarily
+    -- this should catch initial sizing as well
+    local OnSizeChanged = db.icon.autoCrop and OnIconSizeChange or nil
+    icon:SetScript("OnSizeChanged", OnSizeChanged)
+    
+    -- fake a size-change in case 'autoCrop' is toggled
+    if not OnSizeChanged then
+        icon.tex:SetTexCoord(0, 1, 0, 1)
+    else
+        OnIconSizeChange(icon, db.icon.width, db.icon.height)
+    end
+    
+    icon.border:ClearAllPoints()
+    local borderSize = db.icon.border.size or 1
+    icon.border:SetPoint("TOPLEFT", -borderSize, borderSize)
+    icon.border:SetPoint("BOTTOMRIGHT", borderSize, -borderSize)
+	
+	icon.border:SetShown(db.icon.border.shown)
+	icon:GetParent():SetSize(db.icon.width, db.icon.height)
+end
+
+local function ApplyDisplaySettings(icon, spellCD)
+	local db = addon.db:GetDisplaySettings(spellCD.spellid)
 	icon:SetFrameStrata(db.strata)
 	icon:SetFrameLevel(db.frameLevel - 1)
 	icon.border:SetFrameStrata(db.strata)
 	icon.border:SetFrameLevel(db.frameLevel - 2)
-	
-	icon.border:SetShown(db.icon.border.shown)
+end
+
+local cdFrameCounter = 0
+local COOLDOWN_FRAME_NAME = "Overseer_Cooldown_%d"
+local function GetIcon(spellCD, parent)
+	local icon = remove(deadIcons)
+	if not icon then
+		icon = CreateFrame(FRAME_TYPES.FRAME)
+		
+		-- note: the border is actually another frame that sits behind the icon that is 'borderSize' larger
+		icon.border = CreateFrame(FRAME_TYPES.FRAME, nil, icon)
+		icon.border.bg = icon.border:CreateTexture(nil, "BACKGROUND", nil, -8)
+		icon.border.bg:SetAllPoints()
+		
+		cdFrameCounter = cdFrameCounter + 1 -- TODO: TMP - testing if this helps OmniCC see these
+		icon.cd = CreateFrame(FRAME_TYPES.COOLDOWN, COOLDOWN_FRAME_NAME:format(cdFrameCounter), icon)
+		icon.cd:SetAllPoints()
+		icon.tex = icon:CreateTexture(nil, "BACKGROUND", nil, -8)
+		icon.tex:SetNonBlocking(true) -- allow asynchronous texture loading (shouldn't matter in most? all? cases)
+		icon.tex:SetAllPoints()
+	end
+	icon:SetParent(parent) -- must be set before frame strata is applied otherwise z-order is set arbitrarily
+    ApplyDisplaySettings(icon, spellCD)
+    ApplyIconSettings(icon, spellCD)
 	icon:Show()
 	return icon
 end
@@ -495,4 +523,80 @@ Icons[MESSAGES.DISPLAY_TEXT_GROUP_REMOVE] = function(self, msg, child, OnEnter, 
 		Elements:UnregisterMouse(icon, "OnMouseUp", OnMouseUp)
 		Elements:UnregisterMouse(icon, "OnMouseWheel", OnMouseWheel)
 	end
+end
+
+-- ------------------------------------------------------------------
+-- Options handling
+-- ------------------------------------------------------------------
+local DEFAULT_KEY = addon.db.DEFAULT_KEY
+Icons[MESSAGES.OPT_DISPLAY_UPDATE] = function(self, msg, id)
+    if id == DEFAULT_KEY then
+        -- update all icons
+        for display, icon in next, self do
+            if IsIcon(display, icon) then
+                local spellCD = next(display.spells) -- spells which share a display should all have the same settings
+                ApplyDisplaySettings(icon, spellCD)
+            end
+        end
+    else
+        local applied
+        -- look for the specific display to update
+        for display, icon in next, self do
+            if IsIcon(display, icon) then
+                for spellCD in next, display.spells do
+                    local consolidatedId = addon.db:GetConsolidatedKey(spellCD.spellid)
+                    if id == spellCD.spellid or id == consolidatedId then
+                        ApplyDisplaySettings(icon, spellCD)
+                        applied = true
+                        break
+                    end
+                end
+            end
+            
+            if applied then break end
+        end
+        
+        if not applied then
+            local debugMsg = "Icons:%s: No such icon for id='%s'"
+            addon:Debug(debugMsg:format(msg, id))
+        end
+    end
+end
+
+Icons[MESSAGES.OPT_ICON_UPDATE] = function(self, msg, id) -- TODO: this only differs from _DISPLAY_UPDATE by one function call 'ApplyDisplaySettings' vs 'ApplyIconSettings'
+    if id == DEFAULT_KEY then
+        -- update all icons
+        for display, icon in next, self do
+            if IsIcon(display, icon) then
+                local spellCD = next(display.spells) -- spells which share a display should all have the same settings
+                ApplyIconSettings(icon, spellCD)
+                DesaturateIfNoneCastable(icon, display, spellCD)
+                -- TODO: .shown, fake .cooldown & .buffduration
+            end
+        end
+    else
+        local applied
+        -- look for the specific display to update
+        for display, icon in next, self do
+            if IsIcon(display, icon) then
+                for spellCD in next, display.spells do
+                    local consolidatedId = addon.db:GetConsolidatedKey(spellCD.spellid)
+                    if id == spellCD.spellid or id == consolidatedId then
+                        ApplyIconSettings(icon, spellCD)
+                        DesaturateIfNoneCastable(icon, display, spellCD)
+                        
+                        applied = true
+                        break
+                    end
+                end
+            end
+            
+            if applied then break end
+        end
+        
+        if not applied then
+            local debugMsg = "Icons:%s: No such icon for id='%s'"
+            addon:Debug(debugMsg:format(msg, id))
+        end
+    end
 end

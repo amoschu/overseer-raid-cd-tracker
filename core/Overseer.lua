@@ -208,6 +208,7 @@ function addon:OnEnable()
 	self:RegisterBucketEvent("UNIT_NAME_UPDATE", 2)
 	self:RegisterBucketEvent("UNIT_PORTRAIT_UPDATE", 2)
 	
+    self:RegisterEvent("UI_SCALE_CHANGED") -- it seems this fires some time after the loading process (a /reload in group can cause display groups to be sized incorrectly)
 	self:RegisterEvent("PLAYER_REGEN_ENABLED") -- player exits combat (death, combat ends)
 	self:RegisterEvent("ENCOUNTER_START") -- boss engage
 	self:RegisterEvent("ENCOUNTER_END")
@@ -250,6 +251,7 @@ function addon:OnDisable()
 	
 	-- blindly unregister every relevant event
 	self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    self:UnregisterEvent("UI_SCALE_CHANGED")
 	self:UnregisterEvent("PLAYER_LOGIN")
 	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
 	self:UnregisterEvent("INSPECT_READY")

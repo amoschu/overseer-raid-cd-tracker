@@ -43,6 +43,8 @@ local DEFAULTS = {
 local _DEBUG_BARS = true
 local _DEBUG_BARS_PREFIX = "|cff66cc66BARS|r"
 
+local RemoveOnUpdate
+
 -- ------------------------------------------------------------------
 -- Bar data structures
 -- ------------------------------------------------------------------
@@ -66,6 +68,16 @@ local Bars = {
 
 local Elements = addon.DisplayElements
 Elements:Register(Bars, 3)
+
+Bars.RegisterMessage = addon.RegisterMessage
+Bars.UnregisterMessage = addon.UnregisterMessage
+function Bars:Initialize()
+    self:RegisterMessage(MESSAGES.OPT_BARS_UPDATE, MESSAGES.OPT_BARS_UPDATE)
+end
+
+function Bars:Shutdown()
+    self:UnregisterMessage(MESSAGES.OPT_BARS_UPDATE)
+end
 
 -- ------------------------------------------------------------------
 -- Candybar default restoration
@@ -294,7 +306,7 @@ Bars[LCB_STOP_MSG] = function(self, msg, bar)
 		end
 	end
 end
-do -- register against libcandybar's :Stop message (must be done after it is defined)
+do -- register against libcandybar's :Stop message (must be done after the handler is defined)
 	LCB.RegisterCallback(Bars, LCB_STOP_MSG)
 end
 
@@ -393,20 +405,24 @@ local function OnBarUpdate(bar)
 		
 		-- kill this onUpdate func to avoid spamming further
 		-- TODO? TMP?
-		if bar.funcs then
-			local idx
-			for i = 1, #bar.funcs do
-				local updateFunc = bar.funcs[i] 
-				if updateFunc == OnBarUpdate then
-					idx = i
-					break
-				end
-			end
-			if idx then
-				remove(bar.funcs, idx)
-			end
-		end
+        RemoveOnUpdate(bar)
 	end
+end
+
+--[[local]] function RemoveOnUpdate(bar)
+    if bar.funcs then
+        local idx
+        for i = 1, #bar.funcs do
+            local updateFunc = bar.funcs[i] 
+            if updateFunc == OnBarUpdate then
+                idx = i
+                break
+            end
+        end
+        if idx then
+            remove(bar.funcs, idx)
+        end
+    end
 end
 
 local function GetNumBarsRunning(display)
@@ -414,37 +430,44 @@ local function GetNumBarsRunning(display)
 	return type(displayBars) == "table" and #displayBars or 0
 end
 
-local function GetBar(spellCD, display)
+local function SetIcon(bar, spellCD)
 	local db = addon.db:GetDisplaySettings(spellCD.spellid)
-	local numBarsRunning = GetNumBarsRunning(display)
-	if db.bar.limit > 0 and numBarsRunning + 1 > db.bar.limit then
-		-- spawning a new bar would exceed the alotted number of concurrent bars
-		if _DEBUG_BARS then
-			addon:Debug(("%s> GetBar(%s): No empty bar slot!"):format(_DEBUG_BARS_PREFIX, tostring(spellCD)))
+	if db.bar.iconShown then
+		local oldIcon = bar.candyBarIconFrame.icon
+		local newIcon = select(3, GetSpellInfo(spellCD.spellid))
+		if oldIcon ~= newIcon then
+			bar:SetIcon(newIcon)
 		end
-		return nil
 	end
-	
+end
+
+local function ApplySettings(bar, spellCD)
+	local db = addon.db:GetDisplaySettings(spellCD.spellid)
+    
 	local barDB = db.bar
-	local texture = barDB.texture
+	local texture = LSM:Fetch(MEDIA_TYPES.STATUSBAR, barDB.texture)
 	local width = barDB.width
 	local height = barDB.height
 	local orientation = barDB.orientation
-	
-	local bar = LCB:New(LSM:Fetch(MEDIA_TYPES.STATUSBAR, texture), width, height)
 	local statusbar = bar.candyBarBar
 	local label = bar.candyBarLabel
 	local duration = bar.candyBarDuration
-	
-	CacheDefaultBarSettings(bar)
+    
+    bar.width = width -- TODO: change this when switching away from libCandyBar
+    bar.height = height -- TODO: ^ (these only exist because they are flagged in libCandyBar)
+    bar:SetSize(width, height)
 	
 	-- modify the statusbar
+	statusbar:SetStatusBarTexture(texture)
 	statusbar:SetOrientation(orientation)
 	statusbar:SetRotatesTexture(orientation == "VERTICAL" and true or false)
 	
+    -- modify the background
     local r,g,b,a = GetColorFromDB(barDB.bg, spellCD)
     a = a == 1 and 0.5 or a
-	bar.candyBarBackground:SetVertexColor(r, g, b, a)
+    local background = bar.candyBarBackground
+	background:SetTexture(texture)
+	background:SetVertexColor(r, g, b, a)
 	
 	-- modify the fonts
 	local point, relPoint
@@ -470,7 +493,16 @@ local function GetBar(spellCD, display)
 		end
 		label:ClearAllPoints()
 		label:SetPoint(point, statusbar, relPoint, labelDB.x, labelDB.y)
+        
+        -- show label
+		local useClassColor = barDB.label.useClassColor
+		-- TODO: parse text? show spellname instead? ..the user needs to be able to set this text
+        local spellCD = bar.currentSpellCD
+		bar:SetLabel(useClassColor and GUIDClassColoredName(spellCD.guid) or GUIDName(spellCD.guid))
+    else
+        bar:SetLabel()
 	end
+    
 	if barDB.duration.shown then
 		local durationDB = barDB.duration
 		local durationFont = addon.db:LookupFont(durationDB, spellCD.spellid, "font")
@@ -497,6 +529,39 @@ local function GetBar(spellCD, display)
 			bar:AddUpdateFunction(OnBarUpdate)
 		end
 	end
+    if not barDB.duration.movesWithBar then
+        RemoveOnUpdate(bar)
+    end
+    
+	-- show/hide duration
+	local numBarsRunning = GetNumBarsRunning(bar.display)
+	local showOnlyFirst = barDB.duration.showOnlyFirst
+	local showDuration = barDB.duration.shown and (not showOnlyFirst or (showOnlyFirst and numBarsRunning == 1))
+	bar:SetTimeVisibility(showDuration)
+    
+    SetIcon(bar, spellCD)
+end
+
+--[[
+    TODO: always shown bars can probably GetBar => :Show() and call :Start() when needed 
+            the :Stop() handler needs to re - GetBar() => :Show()
+--]]
+local function GetBar(spellCD, display)
+	local db = addon.db:GetDisplaySettings(spellCD.spellid)
+	local numBarsRunning = GetNumBarsRunning(display)
+	if db.bar.limit > 0 and numBarsRunning + 1 > db.bar.limit then
+		-- spawning a new bar would exceed the alotted number of concurrent bars
+		if _DEBUG_BARS then
+			addon:Debug(("%s> GetBar(%s): No empty bar slot!"):format(_DEBUG_BARS_PREFIX, tostring(spellCD)))
+		end
+		return nil
+	end
+	
+	local barDB = db.bar
+	local texture = barDB.texture
+	local width = barDB.width
+	local height = barDB.height
+	local bar = LCB:New(LSM:Fetch(MEDIA_TYPES.STATUSBAR, texture), width, height) -- TODO: these are all set again in 'ApplySettings'..
 	
 	-- store some extra state on the bar
 	bar.display = display
@@ -520,21 +585,16 @@ local function GetBar(spellCD, display)
 	else
 		insert(Bars[display], bar)
 	end
+    
+	-- apply settings to the bar (must happen after inserting into the 'Bars' table so that 'GetNumBarsRunning' returns the correct value)
+	CacheDefaultBarSettings(bar)
+    ApplySettings(bar, spellCD)
+    
 	return bar
 end
 
-local function SetIcon(bar, spellCD)
-	local db = addon.db:GetDisplaySettings(spellCD.spellid)
-	if db.bar.iconShown then
-		local oldIcon = bar.candyBarIconFrame.icon
-		local newIcon = select(3, GetSpellInfo(spellCD.spellid))
-		if oldIcon ~= newIcon then
-			bar:SetIcon(newIcon)
-		end
-	end
-end
-
-local function SetPosition(bar, db, display, posIdx)
+local function SetPosition(bar, display, posIdx)
+    local db = addon.db:GetDisplaySettings(bar.currentSpellCD)
 	local adjust = (db.icon.shown and db.bar.fitIcon) and db.bar.adjust or 0
 	
 	-- determine where to place the bar
@@ -572,25 +632,10 @@ local function SetPosition(bar, db, display, posIdx)
 end
 
 local function StartBar(bar, spellCD, display, duration, expire, posIdx)
-	local db = addon.db:GetDisplaySettings(spellCD.spellid)
-	
 	-- positioning
 	bar:SetParent(display)
 	bar:ClearAllPoints()
-	SetPosition(bar, db, display, posIdx)
-	
-	-- show label
-	if db.bar.label.shown then
-		local useClassColor = db.bar.label.useClassColor
-		-- TODO: parse text? show spellname instead? ..the user needs to be able to set this text
-		bar:SetLabel(useClassColor and GUIDClassColoredName(spellCD.guid) or GUIDName(spellCD.guid))
-	end
-	
-	-- show duration
-	local numBarsRunning = GetNumBarsRunning(display);
-	local showOnlyFirst = db.bar.duration.showOnlyFirst
-	local showDuration = db.bar.duration.shown and (not showOnlyFirst or (showOnlyFirst and numBarsRunning == 1))
-	bar:SetTimeVisibility(showDuration)
+	SetPosition(bar, display, posIdx)
 	
 	-- set default values if not provided
 	duration = duration or spellCD.duration
@@ -821,3 +866,53 @@ Bars[MESSAGES.DISPLAY_COLOR_UPDATE] = function(self, msg, spellCD, display)
 end
 
 -- TODO: show/hide bars of uncastable, etc?
+
+-- ------------------------------------------------------------------
+-- Options handling
+-- ------------------------------------------------------------------
+local DEFAULT_KEY = addon.db.DEFAULT_KEY
+local function IsSetOfBars(display, displayBars)
+    return type(display) == "table" and display.spells and type(displayBars) == "table"
+end
+
+Bars[MESSAGES.OPT_BARS_UPDATE] = function(self, msg, id)
+    if id == DEFAULT_KEY then
+        -- update all bars for all displays
+        for display, displayBars in next, self do
+            if IsSetOfBars(display, displayBars) then
+                local spellCD = next(display.spells) -- spells which share a display should all have the same settings
+                for i = 1, #displayBars do
+                    local bar = displayBars[i]
+                    ApplySettings(bar, spellCD)
+                    -- TODO: .limit, .shown, .cooldown, .showBuffDuration
+                end
+            end
+        end
+    else
+        local applied
+        -- look for the specific display to update
+        for display, displayBars in next, self do
+            if IsSetOfBars(display, displayBars) then
+                for spellCD in next, display.spells do
+                    local consolidatedId = addon.db:GetConsolidatedKey(spellCD.spellid)
+                    if id == spellCD.spellid or id == consolidatedId then
+                        for i = 1, #displayBars do
+                            local bar = displayBars[i]
+                            ApplySettings(bar, spellCD)
+                        end
+                        
+                        applied = true
+                        break
+                    end
+                end
+            end
+            
+            if applied then break end
+        end
+        
+        if not applied then
+            local debugMsg = "Icons:%s: No such icon for id='%s'"
+            addon:Debug(debugMsg:format(msg, id))
+        end
+    end
+end

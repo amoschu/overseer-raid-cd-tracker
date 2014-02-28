@@ -14,6 +14,8 @@ options.consts = {
         MISC = "MISC",
         PROFILES = "PROFILES",
     },
+    
+    OPTIONS_APP_NAME = options:GetName() .. "_%s",
 }
 
 options.tab = {

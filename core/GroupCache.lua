@@ -576,6 +576,10 @@ function GroupCache:UnitSubgroup(unit)
 	end
 end
 
+function GroupCache:IterateGUIDs()
+    return next, self._GUIDs
+end
+
 function GroupCache:IsDead(guid)
 	local guidState = guid and self[STATE_KEY] and self[STATE_KEY][guid]
 	return guidState and guidState.dead

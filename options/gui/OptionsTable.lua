@@ -7,6 +7,10 @@ local AG = LibStub("AceGUI-3.0")
 local LSM = LibStub("LibSharedMedia-3.0")
 local MediaType = LSM.MediaType
 
+local consts = options.consts
+local MESSAGES = addon.consts.MESSAGES
+local OPTIONS_APP_NAME = consts.OPTIONS_APP_NAME
+
 local STRATA = {
     PARENT = "INHERITED",
     BACKGROUND = "BACKGROUND",
@@ -77,6 +81,10 @@ local ON_CONFIG_CHANGE = "ConfigTableChange"
 -- Defaults
 -- ------------------------------------------------------------------
 function options.DefaultsTable(uiType, uiName, app)
+    local id = app:match("_%p+$") -- appname is assumed to have the form 'ADDON_MODULE_id'
+    id = id and id:sub(2)
+    addon:Debug(("DefaultsTable(%s, %s, %s): id='%s'"):format(uiType, uiName, app, tostring(id)))
+    
     local db = addon.db:GetDefaultSettings()
     -- TODO: this is messing with the edit tab's saved status (maybe fixed when other selections are fleshed out?)
     local opts = { -- TODO: every set here needs to set all existing saved data..
@@ -100,7 +108,9 @@ function options.DefaultsTable(uiType, uiName, app)
                     db[element] = val
                     
                     addon.db:SaveDefaultSetting(element, oldVal, val)
-                    -- TODO: broadcast a message or something so that active display elements update
+                    if id then
+                        addon:SendMessage(MESSAGES.OPT_DISPLAY_UPDATE, id)
+                    end
                 end,
                 get = function(info)
                     local element = info[#info]
@@ -143,7 +153,9 @@ function options.DefaultsTable(uiType, uiName, app)
                             db.hide[key] = val
                             
                             addon.db:SaveDefaultSetting(key, oldVal, val, "hide")
-                            -- TODO: broadcast
+                            if id then
+                                addon:SendMessage(MESSAGES.OPT_DISPLAY_UPDATE, id)
+                            end
                         end,
                         get = function(info, key)
                             return db.hide[key]
@@ -303,6 +315,9 @@ function options.DefaultsTable(uiType, uiName, app)
                             db[element] = newVal
                             
                             addon.db:SaveDefaultSetting(element, oldVal, newVal)
+                            if id then
+                                addon:SendMessage(MESSAGES.OPT_DISPLAY_UPDATE, id)
+                            end
                         end,
                     },
                 },
@@ -320,7 +335,9 @@ function options.DefaultsTable(uiType, uiName, app)
                     db.icon[element] = val
                     
                     addon.db:SaveDefaultSetting(element, oldVal, val, "icon")
-                    -- TODO: broadcast a message or something so that active display elements update
+                    if id then
+                        addon:SendMessage(MESSAGES.OPT_ICON_UPDATE, id)
+                    end
                 end,
                 get = function(info)
                     local element = info[#info]
@@ -415,7 +432,9 @@ function options.DefaultsTable(uiType, uiName, app)
                             db.icon.border[element] = val
                             
                             addon.db:SaveDefaultSetting(element, oldVal, val, "icon", "border")
-                            -- TODO: broadcast a message or something so that active display elements update
+                            if id then
+                                addon:SendMessage(MESSAGES.OPT_ICON_UPDATE, id)
+                            end
                         end,
                         get = function(info)
                             local element = "shown"
@@ -438,7 +457,9 @@ function options.DefaultsTable(uiType, uiName, app)
                             db.icon.border[element] = val
                             
                             addon.db:SaveDefaultSetting(element, oldVal, val, "icon", "border")
-                            -- TODO: broadcast a message or something so that active display elements update
+                            if id then
+                                addon:SendMessage(MESSAGES.OPT_ICON_UPDATE, id)
+                            end
                         end,
                         get = function(info)
                             local element = "size"
@@ -458,7 +479,9 @@ function options.DefaultsTable(uiType, uiName, app)
                             db.icon.border[element] = val
                             
                             addon.db:SaveDefaultSetting(element, oldVal, val, "icon", "border")
-                            -- TODO: broadcast a message or something so that active display elements update
+                            if id then
+                                addon:SendMessage(MESSAGES.OPT_ICON_UPDATE, id)
+                            end
                         end,
                         get = function(info)
                             local element = "useClassColor"
@@ -492,7 +515,9 @@ function options.DefaultsTable(uiType, uiName, app)
                             addon.db:SaveDefaultSetting("g", oldG, g, "icon", "border")
                             addon.db:SaveDefaultSetting("b", oldB, b, "icon", "border")
                             addon.db:SaveDefaultSetting("a", oldA, a, "icon", "border")
-                            -- TODO: broadcast a message or something so that active display elements update
+                            if id then
+                                addon:SendMessage(MESSAGES.OPT_ICON_UPDATE, id)
+                            end
                         end,
                         get = function(info)
                             local borderDB = db.icon.border

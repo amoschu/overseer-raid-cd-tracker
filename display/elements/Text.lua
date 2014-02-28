@@ -517,12 +517,36 @@ local Texts = {
 local Elements = addon.DisplayElements
 Elements:Register(Texts, 1)
 
+Texts.RegisterMessage = addon.RegisterMessage
+Texts.UnregisterMessage = addon.UnregisterMessage
+function Texts:Initialize()
+    self:RegisterMessage(MSG.OPT_TEXTS_UPDATE, MSG.OPT_TEXTS_UPDATE)
+end
+
+function Texts:Shutdown()
+    self:UnregisterMessage(MSG.OPT_TEXTS_UPDATE)
+end
+
+local ApplySettings(fontString, spellCD)
+    -- TODO: what to look up? how to even do this?
+    --      ..could tag the db entry that this fontString represents (eg: fontString.db = textData)
+    --      ..but would that work on profile swaps?
+end
+
 local TEXT_ELEMENT_KEY = consts.TEXT_ELEMENT_KEY
 local function GetTexts(spellCD, parent)
 	local spellid = spellCD.spellid
 	local db = addon.db:GetDisplaySettings(spellid)
 	if db.texts then
 		local textCluster
+        --[[
+            TODO: this system needs to be re-examined
+                if two spellids share a display but have a different amount of texts (or their text options differ / are in a different order)
+                then the spellid which most recently calls 'GetTexts' will be the one to have its text displayed while the other's text settings are discarded
+                
+                1. does this matter? ie, can the user get into this state through the GUI?
+                2. possible fix: key by .value in the db
+        --]]
 		for i = 1, #db.texts do
 			local textData = db.texts[i]
 			if textData.enabled and textData.value then -- don't create a fontstring for disabled texts or if no value is supplied (an empty fontstring)
@@ -879,4 +903,52 @@ Texts[MSG.DISPLAY_GROUP_REMOVE] = function(self, msg, child, group)
 			addon:SendMessage(MSG.DISPLAY_TEXT_GROUP_REMOVE, child, OnEnter, OnLeave, nil, onMouseUp)
 		end
 	end
+end
+
+-- ------------------------------------------------------------------
+-- Options handling
+-- ------------------------------------------------------------------
+local DEFAULT_KEY = addon.db.DEFAULT_KEY
+local function IsSetOfBars(display, displayBars)
+    return type(display) == "table" and display.spells and type(displayBars) == "table"
+end
+
+Texts[MSG.OPT_TEXTS_UPDATE] = function(self, msg, id)
+    if id == DEFAULT_KEY then
+        -- update all fontstrings for all displays
+		for display, textCluster in next, self do
+            if IsTextCluster(display, textCluster) then
+                local spellCD = next(display.spells) -- spells which share a display should all have the same settings
+                for i = 1, #textCluster do
+                    local fontString = textCluster[i]
+                    ApplySettings(fontString, spellCD)
+                    -- TODO: 
+                end
+            end
+        end
+    else
+        local applied
+        -- look for the specific display to update
+		for display, textCluster in next, self do
+            if IsTextCluster(display, textCluster) then
+                for spellCD in next, display.spells do
+                    local consolidatedId = addon.db:GetConsolidatedKey(spellCD.sp
+                        for i = 1, #textCluster do
+                            local fontString = textCluster[i]
+                            ApplySettings(fontString, spellCD)
+                        end
+                        applied = true
+                        break
+                    end
+                end
+            end
+            
+            if applied then break end
+        end
+        
+        if not applied then
+            local debugMsg = "Icons:%s: No such icon for id='%s'"
+            addon:Debug(debugMsg:format(msg, id))
+        end
+    end
 end

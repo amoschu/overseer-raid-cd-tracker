@@ -427,7 +427,7 @@ local function CompareChildren(byChild, childA, childB)
 	return posA < posB
 end
 
-local function AddChild(parent, child, position)
+local function AddChild(parent, child, position) -- TODO: :Unembed movable from child (only if child is a SpellDisplay ?)
 	local added = false
 	local byChild = parent.children.byChild
 	if not byChild[child] then

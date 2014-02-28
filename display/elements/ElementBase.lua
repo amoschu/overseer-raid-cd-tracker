@@ -171,6 +171,14 @@ function Elements:Initialize()
 	self:RegisterMessage(MESSAGES.BREZ_ACCEPT)
 	self:RegisterMessage(MESSAGES.BREZ_RESET)
 	self:RegisterMessage(MESSAGES.BREZ_OUT)
+    
+    -- run any element-specific initialization
+	for i = 1, #self do
+		local element = self[i]
+		if type(element) == "table" and type(element.Initialize) == "function" then
+			element:Initialize()
+		end
+	end
 end
 
 function Elements:Shutdown()
@@ -207,4 +215,12 @@ function Elements:Shutdown()
 	self:UnregisterMessage(MESSAGES.BREZ_ACCEPT)
 	self:UnregisterMessage(MESSAGES.BREZ_RESET)
 	self:UnregisterMessage(MESSAGES.BREZ_OUT)
+    
+    -- run any element-specific shutdown
+	for i = 1, #self do
+		local element = self[i]
+		if type(element) == "table" and type(element.Initialize) == "function" then
+			element:Shutdown()
+		end
+	end
 end

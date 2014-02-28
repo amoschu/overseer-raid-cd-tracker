@@ -117,10 +117,21 @@ function addon:GetMostRecentBuffCastSpell(display)
 	return mostRecent
 end
 
-local MovableObject = addon.MovableObject -- TODO: don't blindly make all display frames movable
+local function ApplySettings(frame, spellCD)
+	local db = addon.db:GetDisplaySettings(spellCD.spellid)
+	frame:SetAlpha(db.alpha)
+	frame:SetScale(db.scale)
+	frame:SetFrameStrata(db.strata)
+	frame:SetFrameLevel(db.frameLevel)
+	
+    if not frame.group then -- TODO: only skip positioning if the group is dynamic
+        frame:SetPoint(addon.db:LookupPosition(db))
+    end
+end
+
+local MovableObject = addon.MovableObject -- TODO? don't blindly make all display frames movable
 local SizableObject = addon.SizableObject
 local function GetFrame(spellCD)
-	local db = addon.db:GetDisplaySettings(spellCD.spellid)
 	local frame = remove(deadDisplays)
 	if not frame then
 		frame = CreateFrame(FRAME_TYPES.FRAME, nil, UIParent)
@@ -130,13 +141,7 @@ local function GetFrame(spellCD)
 	MovableObject:Embed(frame, "Frame")
 	SizableObject:Embed(frame)
 	
-	frame:SetSize(db.icon.width, db.icon.height) -- TODO: separate from icon? is there a need?
-	frame:SetAlpha(db.alpha)
-	frame:SetScale(db.scale)
-	frame:SetFrameStrata(db.strata)
-	frame:SetFrameLevel(db.frameLevel)
-	
-	frame:SetPoint(addon.db:LookupPosition(spellCD.spellid))
+    ApplySettings(frame, spellCD)
 	
 	frame:Show()
 	return frame
@@ -203,6 +208,45 @@ local function DestroyFrame(spellCD, frame)
 	SizableObject:Unembed(frame)
 end
 
+local function SetDisplayVisibility(spellCD, instance, shown)
+	shown = tobool(shown)
+	local oldShown = tobool(instance:IsShown())
+	if oldShown ~= shown then
+		instance:SetShown(shown)
+		
+		local msg = shown and MESSAGES.DISPLAY_SHOW or MESSAGES.DISPLAY_HIDE
+		addon:SendMessage(msg, spellCD, instance)
+	end
+end
+
+local function QueryGroupCacheState(db, display)
+    local dead = db.hide.dead
+    local offline = db.hide.offline
+    local benched = db.hide.benched
+    -- check every spell this display represents to set its shown state
+    for spell in next, display.spells do
+        local spellGUID = spell.guid
+        -- all guids for every spell on this display must be in the given state for the display to hide
+        -- otherwise the display will hide as soon as ANY guid is in that state
+        --[[
+            intended functionality:
+            eg, Demo Banner displayed for Meallon and Ogriot
+                
+            Scenario A:
+                Ogriot benched, Meallon not benched
+                Demo Banner remains shown
+                
+            Scenario B:
+                Ogriot benched, Meallon benched
+                Demo Banner hides
+        --]]
+        dead = dead and GroupCache:IsDead(spellGUID)
+        offline = offline and GroupCache:IsOffline(spellGUID)
+        benched = benched and GroupCache:IsBenched(spellGUID)
+    end
+    return dead, offline, benched
+end
+
 local function OnDelete(msg, spellCD)
 	local instance = Frames[spellCD]
 	if instance then
@@ -227,9 +271,12 @@ local function OnDelete(msg, spellCD)
 				DestroyFrame(spellCD, instance)
 			end
 		end
+        
+		-- recheck visibility in case this was the last person keeping the display from hiding
+        local dead, offline, benched = QueryGroupCacheState(db, instance)
+        SetDisplayVisibility(spellCD, instance, not (dead or offline or benched))
+        
 		Frames[spellCD] = nil
-		-- in case this was the last person keeping the display from hiding
-		OnGUIDStateChange(msg, spellCD.guid)
 	end
 end
 
@@ -274,17 +321,6 @@ local function OnClassColorUpdate(msg)
 	end
 end
 
-local function SetDisplayVisibility(spellCD, instance, shown)
-	shown = tobool(shown)
-	local oldShown = tobool(instance:IsShown())
-	if oldShown ~= shown then
-		instance:SetShown(shown)
-		
-		local msg = shown and MESSAGES.DISPLAY_SHOW or MESSAGES.DISPLAY_HIDE
-		addon:SendMessage(msg, spellCD, instance)
-	end
-end
-
 --[[local]] function OnGUIDStateChange(msg, guid)
 	local spellids = Cooldowns:GetSpellIdsFor(guid)
 	if spellids then
@@ -293,30 +329,32 @@ end
 			local display = Frames[spellCD]
 			if display and display.spells then -- unnecessary check
 				local db = addon.db:GetDisplaySettings(id)
-				local dead = db.hide.dead
-				local offline = db.hide.offline
-				local benched = db.hide.benched
-				-- check every spell this display represents to set its shown state
-				for spell in next, display.spells do
-					local spellGUID = spell.guid
-					-- all guids for every spell on this display must be in the given state for the display to hide
-					-- otherwise the display will hide as soon as ANY guid is in that state
-					--[[
-						intended functionality:
-						eg, Demo Banner displayed for Meallon and Ogriot
+                local dead, offline, benched = QueryGroupCacheState(db, display)
+                
+				-- local dead = db.hide.dead
+				-- local offline = db.hide.offline
+				-- local benched = db.hide.benched
+				-- -- check every spell this display represents to set its shown state
+				-- for spell in next, display.spells do
+					-- local spellGUID = spell.guid
+					-- -- all guids for every spell on this display must be in the given state for the display to hide
+					-- -- otherwise the display will hide as soon as ANY guid is in that state
+					-- --[[
+						-- intended functionality:
+						-- eg, Demo Banner displayed for Meallon and Ogriot
 							
-						Scenario A:
-							Ogriot benched, Meallon not benched
-							Demo Banner remains shown
+						-- Scenario A:
+							-- Ogriot benched, Meallon not benched
+							-- Demo Banner remains shown
 							
-						Scenario B:
-							Ogriot benched, Meallon benched
-							Demo Banner hides
-					--]]
-					dead = dead and GroupCache:IsDead(spellGUID)
-					offline = offline and GroupCache:IsOffline(spellGUID)
-					benched = benched and GroupCache:IsBenched(spellGUID)
-				end
+						-- Scenario B:
+							-- Ogriot benched, Meallon benched
+							-- Demo Banner hides
+					-- --]]
+					-- dead = dead and GroupCache:IsDead(spellGUID)
+					-- offline = offline and GroupCache:IsOffline(spellGUID)
+					-- benched = benched and GroupCache:IsBenched(spellGUID)
+				-- end
 				--addon:Debug(("Display %s: all dead? %s, all offline? %s, all benched? %s"):format(GUIDClassColoredName(guid), tostring(dead), tostring(offline), tostring(benched)))
 				SetDisplayVisibility(spellCD, display, not (dead or offline or benched))
 			end
@@ -324,6 +362,40 @@ end
 	end
 end
 
+local DEFAULT_KEY = addon.db.DEFAULT_KEY
+local function UpdateDisplay(msg, id)
+    if id == DEFAULT_KEY then
+        -- update all displays
+        for spellCD, frame in next, Frames do
+            ApplySettings(frame, spellCD)
+            -- TODO: .shown, .unique
+        end
+        for guid in GroupCache:IterateGUIDs() do -- TODO: this seems super expensive, may cause frame stutter
+            OnGUIDStateChange(msg, guid)
+        end
+    else
+        local applied
+        -- look for the specific display to update
+        for spellCD, display in next, Frames do
+            local consolidatedId = addon.db:GetConsolidatedKey(spellCD.spellid)
+            if id == spellCD.spellid or id == consolidatedId then
+                ApplySettings(display, spellCD)
+                OnGUIDStateChange(msg, spellCD.guid)
+                applied = true
+                break
+            end
+        end
+        
+        if not applied then
+            local debugMsg = "UpdateDisplay(%s): No such display for id='%s'"
+            addon:Debug(debugMsg:format(msg, id))
+        end
+    end
+end
+
+-- ------------------------------------------------------------------
+-- Public
+-- ------------------------------------------------------------------
 local SpellDisplay = {
 	--[[
 	display message handler
@@ -352,6 +424,9 @@ function SpellDisplay:Initialize()
 	self:RegisterMessage(MESSAGES.GUID_CHANGE_DEAD, OnGUIDStateChange)
 	self:RegisterMessage(MESSAGES.GUID_CHANGE_ONLINE, OnGUIDStateChange)
 	self:RegisterMessage(MESSAGES.GUID_CHANGE_BENCHED, OnGUIDStateChange)
+    
+    self:RegisterMessage(MESSAGES.OPT_DISPLAY_UPDATE, UpdateDisplay)
+    
 	if not Elements then
 		Elements = addon.DisplayElements
 	end
@@ -372,4 +447,5 @@ function SpellDisplay:Shutdown()
 	self:UnregisterMessage(MESSAGES.CD_READY)
 	self:UnregisterMessage(MESSAGES.CD_RESET)
 	self:UnregisterMessage(MESSAGES.CLASS_COLORS_CHANGED)
+    self:UnregisterMessage(MESSAGES.OPT_DISPLAY_UPDATE)
 end

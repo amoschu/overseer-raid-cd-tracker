@@ -512,7 +512,9 @@ end
 
 function db:LookupPosition(key)
 	local settings
-	if type(key) == "number" then
+    if type(key) == "table" then
+        settings = key
+	elseif type(key) == "number" then
 		settings = self:GetDisplaySettings(key)
 	else
 		settings = self:GetGroupOptions(key)

@@ -229,7 +229,7 @@ end
 -- ------------------------------------------------------------------
 -- Tab select
 -- ------------------------------------------------------------------
-local OPTIONS_APP_NAME = options:GetName() .. "_%s"
+local OPTIONS_APP_NAME = consts.OPTIONS_APP_NAME
 local DrawSelection = {}
 
 --[[
