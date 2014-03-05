@@ -129,7 +129,7 @@ end
 
 local function UnitIsInspectable(unit)
 	local guid = GetGUIDFromUnit(unit, "UnitIsInspectable")
-	return guid and not GroupCache:IsBenched(guid)
+	return guid --and not GroupCache:IsBenched(guid)
 		and UnitIsVisible(unit) -- I think the client can only inspect units that are visible? I'm not 100%
 		and UnitIsConnected(unit)
 		and CanInspect(unit) -- when does this ever return false?
