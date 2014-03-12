@@ -642,7 +642,7 @@ local function DespawnGroups(childId, child, visited)
 			if groupOptions.children[childId] then
 				local parentGroup = DisplayGroup[groupId]
 				-- the display may not have been part of a group
-				if parentGroup then
+				if parentGroup and parentGroup.children.byChild[child] then
 					if _DEBUG_GROUPS then
 						addon:Debug(("%s> |cff999999RemoveChild|r(%s): parent.numChildren=|cffFF00FF%s|r"):format(_DEBUG_GROUPS_PREFIX, tostring(childId), parentGroup.numChildren - 1))
 					end
