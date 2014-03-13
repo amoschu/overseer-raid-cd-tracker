@@ -457,16 +457,16 @@ local function ResizeParent(parent)
 		if child:IsVisible() then -- hidden frames should not affect the size
 			local effScale = child:GetEffectiveScale()
 			
-			local cLeft = child:GetLeft() * effScale
+			local cLeft = child:GetLeft() and child:GetLeft() * effScale
 			if cLeft < left then left = cLeft end
 			
-			local cRight = child:GetRight() * effScale
+			local cRight = child:GetRight() and child:GetRight() * effScale
 			if cRight > right then right = cRight end
 			
-			local cTop = child:GetTop() * effScale
+			local cTop = child:GetTop() and child:GetTop() * effScale
 			if cTop > top then top = cTop end
 			
-			local cBottom = child:GetBottom() * effScale
+			local cBottom = child:GetBottom() and child:GetBottom() * effScale
 			if cBottom < bottom then bottom = cBottom end
 			
 			addon:SendMessage(MESSAGES.DISPLAY_GROUP_RESIZE, child, parent)
