@@ -381,7 +381,7 @@ end
 
 Icons[MESSAGES.DISPLAY_USE] = function(self, msg, spellCD, display)
 	local icon = self[display]
-	if icon then
+	if icon and not icon.cd.brezCharging then
 		-- try to show a buff duration for this spell
 		-- showing buff durations takes precedence over normal cooldowns and previously cast buff durations
 		if spellCD:BuffExpirationTime() > GetTime() then
@@ -455,7 +455,7 @@ local function IsIcon(display, icon)
 	return type(display) == "table" and display.spells and type(icon) == "table"
 end
 
-local function IconBrezHandler(self, msg, brezCount)
+local function FindIconApply(self, callback)
 	for display, icon in next, self do
 		if IsIcon(display, icon) then
 			for id in next, BREZ_IDS do
@@ -464,18 +464,61 @@ local function IconBrezHandler(self, msg, brezCount)
 					for _, spellCD in next, spellCooldowns do
 						if display.spells[spellCD] then
 							-- TODO: read user option on when/how to desat
-							DesaturateIfNoneCastable(icon, display, spellCD)
+							callback(icon, display, spellCD)
 							break
 						end
 					end
 				end
 			end
             -- don't break from looping through all displays in case the user has multiple brez displays
+            -- TODO: reconsider whether to break or not (6.0 functionality kind of destroys any logic in having multiple brez displays)
 		end
 	end
 end
-Icons[MESSAGES.BREZ_OUT] = 		IconBrezHandler
-Icons[MESSAGES.BREZ_RESET] = 	IconBrezHandler
+
+Icons[MESSAGES.BREZ_OUT] = function(self, msg, brezCount)
+    FindIconApply(self, DesaturateIfNoneCastable)
+end
+Icons[MESSAGES.BREZ_RESET] = Icons[MESSAGES.BREZ_OUT]
+
+Icons[MESSAGES.BREZ_CHARGING] = function(self, msg, brezCount, brezRechargeStart, brezRechargeDuration)
+	for display, icon in next, self do
+		if IsIcon(display, icon) then
+			for id in next, BREZ_IDS do
+				local spellCooldowns = Cooldowns[id]
+				if spellCooldowns then
+					for _, spellCD in next, spellCooldowns do
+						if display.spells[spellCD] then
+                            local db = addon.db:GetDisplaySettings(spellCD.spellid)
+                            if db.icon.cooldown then
+                                icon.cd.brezCharging = true -- flag that this icon's cd is representing a charging brez
+                                icon.cd:SetReverse(false)
+                                
+                                icon.cd:SetCooldown(brezRechargeStart, brezRechargeDuration)
+                                icon.cd.start = brezRechargeStart
+                                icon.cd.expire = brezRechargeStart + brezRechargeDuration
+                            end
+                            -- TODO: read user option on when/how to desat
+                            DesaturateIfNoneCastable(icon, display, spellCD)
+							break
+						end
+					end
+				end
+			end
+            -- don't break from looping through all displays in case the user has multiple brez displays
+            -- TODO: reconsider whether to break or not (6.0 functionality kind of destroys any logic in having multiple brez displays)
+		end
+	end
+end
+Icons[MESSAGES.BREZ_RECHARGED] = Icons[MESSAGES.BREZ_CHARGING]
+
+local function BrezStopCharging(icon, display, spellCD)
+    icon.cd.brezCharging = nil
+    Icons[MESSAGES.DISPLAY_USE](Icons, nil, spellCD, display) -- fake a DISPLAY_USE message in case any icons need to show an actual cd
+end
+Icons[MESSAGES.BREZ_STOP_CHARGING] = function(self, msg)
+    FindIconApply(self, BrezStopCharging)
+end
 
 -- ------------------------------------------------------------------
 -- GUID state handling

@@ -41,6 +41,8 @@ local MESSAGES = {
 	BREZ_RESET = "BREZ_RESET",
 	BREZ_OUT = "BREZ_OUT", -- TODO: needed?
     BREZ_RECHARGED = "BREZ_RECHARGED",
+    BREZ_CHARGING = "BREZ_CHARGING",
+    BREZ_STOP_CHARGING = "BREZ_STOP_CHARGING",
 	
 	-- displays send out messages for elements to respond to
 	-- the base display frames are invisible which house logic for its constituent elements

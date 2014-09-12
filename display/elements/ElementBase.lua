@@ -105,6 +105,9 @@ Elements[MESSAGES.GUID_CHANGE_BENCHED] 	= ElementGUIDUpdateHandler
 Elements[MESSAGES.BREZ_ACCEPT]			= ElementBrezHandler
 Elements[MESSAGES.BREZ_RESET]			= ElementBrezHandler
 Elements[MESSAGES.BREZ_OUT]				= ElementBrezHandler
+Elements[MESSAGES.BREZ_RECHARGED]		= ElementBrezHandler
+Elements[MESSAGES.BREZ_CHARGING]		= ElementBrezHandler
+Elements[MESSAGES.BREZ_STOP_CHARGING]	= ElementBrezHandler
 
 do 
 	Elements.RegisterMessage = addon.RegisterMessage
@@ -171,6 +174,9 @@ function Elements:Initialize()
 	self:RegisterMessage(MESSAGES.BREZ_ACCEPT)
 	self:RegisterMessage(MESSAGES.BREZ_RESET)
 	self:RegisterMessage(MESSAGES.BREZ_OUT)
+	self:RegisterMessage(MESSAGES.BREZ_RECHARGED)
+	self:RegisterMessage(MESSAGES.BREZ_CHARGING)
+	self:RegisterMessage(MESSAGES.BREZ_STOP_CHARGING)
     
     -- run any element-specific initialization
 	for i = 1, #self do
@@ -215,6 +221,9 @@ function Elements:Shutdown()
 	self:UnregisterMessage(MESSAGES.BREZ_ACCEPT)
 	self:UnregisterMessage(MESSAGES.BREZ_RESET)
 	self:UnregisterMessage(MESSAGES.BREZ_OUT)
+	self:UnregisterMessage(MESSAGES.BREZ_RECHARGED)
+	self:UnregisterMessage(MESSAGES.BREZ_CHARGING)
+	self:UnregisterMessage(MESSAGES.BREZ_STOP_CHARGING)
     
     -- run any element-specific shutdown
 	for i = 1, #self do

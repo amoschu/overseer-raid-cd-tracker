@@ -62,6 +62,7 @@ local dead = {
 
 local deadCount = 0
 local brezCount = 0 -- the current remaining number of combat resses
+local brezRechargeStart = 0 -- the start of the current charge's timer (from GetTime())
 local brezRechargeTimer = nil
 
 -- ------------------------------------------------------------------
@@ -273,6 +274,7 @@ end
 local function BrezRecharge(scheduleRepeating)
     brezCount = brezCount + 1
     SaveBrezInfo(true)
+    brezRechargeStart = GetTime()
     addon:SendMessage(MESSAGES.BREZ_RECHARGED, brezCount)
     
     -- TODO: TMP
@@ -393,6 +395,7 @@ function addon:EnableBrezScan()
     Cooldowns:ResetBrezCooldowns()
     brezCount = lastCount or 1
     if not nextRecharge then
+        brezRechargeStart = GetTime()
         brezRechargeTimer = self:ScheduleRepeatingTimer(BrezRecharge, GetRechargeTimeSec())
         SaveBrezInfo(true)
     else
@@ -403,11 +406,13 @@ function addon:EnableBrezScan()
             brezCount = brezCount + 1
             SaveBrezInfo(true)
         end
+        brezRechargeStart = GetTime() - remaining
         -- schedule a one-off timer for the next charge
         brezRechargeTimer = self:ScheduleTimer(BrezRecharge, GetRechargeTimeSec() - remaining, true)
     end
     
-	addon:SendMessage(MESSAGES.BREZ_RESET, brezCount)
+	--addon:SendMessage(MESSAGES.BREZ_RESET, brezCount) -- TODO: delete? can this ever differ from _CHARGING?
+	addon:SendMessage(MESSAGES.BREZ_CHARGING, brezCount, brezRechargeStart, GetRechargeTimeSec())
 end
 
 function addon:DisableBrezScan()
@@ -421,6 +426,8 @@ function addon:DisableBrezScan()
 	self:UnsubscribeCLEUEvent("SPELL_AURA_APPLIED")
 	self:UnsubscribeCLEUEvent("UNIT_DIED")
 	self:UnsubscribeCLEUEvent("SPELL_RESURRECT")
+    
+    addon:SendMessage(MESSAGES.BREZ_STOP_CHARGING)
 end
 
 local resScanTimer

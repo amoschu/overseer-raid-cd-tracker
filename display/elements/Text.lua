@@ -706,8 +706,9 @@ local function TextBrezHandler(self)
 		end
 	end
 end
-Texts[MSG.BREZ_ACCEPT] = TextBrezHandler
-Texts[MSG.BREZ_RESET]  = TextBrezHandler
+Texts[MSG.BREZ_ACCEPT]    = TextBrezHandler
+Texts[MSG.BREZ_RESET]     = TextBrezHandler
+Texts[MSG.BREZ_RECHARGED] = TextBrezHandler
 
 -- ------------------------------------------------------------------
 -- GUID State handling

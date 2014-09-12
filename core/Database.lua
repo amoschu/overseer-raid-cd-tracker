@@ -259,11 +259,13 @@ do -- setup default table
 			texts = {
 				{
 					value = ESC_SEQUENCES.NUM_BREZ,
+                    x = 15,
 				},
 				{
 					point = "TOPLEFT",
 					relPoint = "TOPRIGHT",
 					value = ESC_SEQUENCES.NAMES_USABLE,
+                    enabled = false,
 				},
 				{ -- first on cd
 					enabled = false,

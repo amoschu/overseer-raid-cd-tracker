@@ -15,6 +15,7 @@ local GUIDName = addon.GUIDName
 local GUIDClassColorRGB = addon.GUIDClassColorRGB
 local GUIDClassColoredName = addon.GUIDClassColoredName
 
+local BREZ_IDS = consts.BREZ_IDS
 local MESSAGES = consts.MESSAGES
 local MEDIA_TYPES = LSM.MediaType
 
@@ -662,7 +663,7 @@ local function StartCooldown(spellCD, display)
     local db = addon.db:GetDisplaySettings(spellCD.spellid)
     if db.bar.shown and db.bar.cooldown then
         local bar = GetBar(spellCD, display)
-        if bar then
+        if bar and not bar.brezCharging then
             local db = addon.db:GetDisplaySettings(spellCD.spellid)
             bar:SetColor(GetColorFromDB(db.bar.bar, spellCD))
             bar:SetFill(db.bar.fill)
@@ -809,7 +810,7 @@ end
 -- OnUse
 -- ------------------------------------------------------------------
 Bars[MESSAGES.DISPLAY_USE] = function(self, msg, spellCD, display)
-    addon:PRINT("%s: %s", msg, tostring(spellCD))
+    addon:PRINT("%s: %s", tostring(msg), tostring(spellCD))
     -- try to start a buff duration bar
     if not StartBuffDurationCountdown(spellCD, display) then
         -- try to start a cooldown bar for this spellCD use
@@ -819,6 +820,79 @@ Bars[MESSAGES.DISPLAY_USE] = function(self, msg, spellCD, display)
             -- if a bar exists, another charge was used for this specific spellCD instance while a bar was actively running for it
             -- a spellCD instance can only have one cooldown running at a time, so showing another bar for it would
             -- be conveying the same cooldown information twice
+        end
+    end
+end
+
+-- ------------------------------------------------------------------
+-- Brez handling
+-- ------------------------------------------------------------------
+local function IsBar(display, bars)
+	return type(display) == "table" and display.spells and type(bars) == "table"
+end
+
+Bars[MESSAGES.BREZ_CHARGING] = function(self, msg, brezCount, brezRechargeStart, brezRechargeDuration)
+	for display, bars in next, self do
+        if IsBar(display, bars) then
+			for id in next, BREZ_IDS do
+				local spellCooldowns = Cooldowns[id]
+				if spellCooldowns then
+					for _, spellCD in next, spellCooldowns do
+						if display.spells[spellCD] then
+                            local db = addon.db:GetDisplaySettings(spellCD.spellid)
+                            if db.bar.cooldown then
+                                local bar = FindBar(spellCD, display) -- TODO: what if there are multiple bars? can that even happen?
+                                
+                                bar.brezCharging = true -- flag that this bar is representing a charging brez
+                                bar.fill = false
+                                
+                                -- positioning
+                                bar:SetParent(display)
+                                bar:ClearAllPoints()
+                                SetPosition(bar, display)
+                                
+                                bar:SetDuration(brezRechargeDuration)
+                                bar:Start()
+                                -- manually adjust the bar to fake as though it were always running
+                                -- (in case this bar is starting midway through its duration)
+                                -- TODO: is this needed?
+                                local now = GetTime()
+                                local expire = brezRechargeStart + brezRechargeDuration
+                                local remaining = expire - now
+                                bar.start = bar.fill and expire - brezRechargeDuration or remaining
+                                bar.exp = expire
+                            end
+							break
+						end
+					end
+				end
+			end
+        end
+    end
+end
+Bars[MESSAGES.BREZ_RECHARGED] = Bars[MESSAGES.BREZ_CHARGING]
+
+Bars[MESSAGES.BREZ_STOP_CHARGING] = function(self, msg)
+	for display, bars in next, self do
+        if IsBar(display, bars) then
+			for id in next, BREZ_IDS do
+				local spellCooldowns = Cooldowns[id]
+				if spellCooldowns then
+					for _, spellCD in next, spellCooldowns do
+						if display.spells[spellCD] then
+                            local db = addon.db:GetDisplaySettings(spellCD.spellid)
+                            if db.bar.cooldown then
+                                local bar = bars[1] -- TODO: what if there are multiple bars? can that even happen?
+                                
+                                bar.brezCharging = nil
+                                -- fake a DISPLAY_USE message in case any bars need to show an actual cd
+                                Bars[MESSAGES.DISPLAY_USE](Bars, nil, spellCD, display)
+                            end
+							break
+						end
+					end
+				end
+			end
         end
     end
 end
