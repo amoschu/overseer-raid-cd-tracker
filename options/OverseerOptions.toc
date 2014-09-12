@@ -1,4 +1,4 @@
-## Interface: 50400
+## Interface: 60000
 ## Title: Overseer |cffED2939Options|r
 ## Author: Latreese
 ## Version: @project-version@
