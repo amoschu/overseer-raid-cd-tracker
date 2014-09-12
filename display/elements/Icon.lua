@@ -208,7 +208,8 @@ local function GetIcon(spellCD, parent)
 		icon.border.bg:SetAllPoints()
 		
 		cdFrameCounter = cdFrameCounter + 1 -- TODO: TMP - testing if this helps OmniCC see these
-		icon.cd = CreateFrame(FRAME_TYPES.COOLDOWN, COOLDOWN_FRAME_NAME:format(cdFrameCounter), icon)
+		icon.cd = CreateFrame(FRAME_TYPES.COOLDOWN, COOLDOWN_FRAME_NAME:format(cdFrameCounter), icon, "CooldownFrameTemplate")
+        icon.cd:ClearAllPoints() -- to clear inherited points
 		icon.cd:SetAllPoints()
 		icon.tex = icon:CreateTexture(nil, "BACKGROUND", nil, -8)
 		icon.tex:SetNonBlocking(true) -- allow asynchronous texture loading (shouldn't matter in most? all? cases)
