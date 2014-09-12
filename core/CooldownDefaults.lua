@@ -36,26 +36,21 @@ function addon:InitializeDefaultCooldowns()
 	addon:AddCooldown(61999, classes.dk) -- raise ally
 	addon:AddCooldownFromTalent(51052, classes.dk, nil, nil, 3, 5) -- anti magic zone
 	-- DRUID
-	addon:AddCooldown(29166, classes.druid, nil, nil, 10) -- innervate
+	--addon:AddCooldown(29166, classes.druid, nil, nil, 10) -- innervate
 	addon:AddCooldown(20484, classes.druid) -- rebirth
 	addon:AddCooldown(106898, classes.druid, nil, nil, 8) -- stampeding roar
-	addon:AddCooldown(740, classes.druid, nil, nil, 8, nil, -- tranquility
-		{
-			[filterKeys.CD] = addon:EncodeModificationData(3 * 60, "=", optionalKeys.SPEC, specs[classes.druid]["Restoration"]),
-		}
-	)
+	addon:AddCooldownFromSpec(740, classes.druid, 3 * 60, nil, 8, specs[classes.druid]["Restoration"]) -- tranquility
 	addon:AddCooldownFromSpec(102342, classes.druid, nil, nil, 12, specs[classes.druid]["Restoration"]) -- iron bark
 	-- HUNTER - TODO: localization
 	addon:AddCooldown(126393, classes.hunter, nil, nil, nil, -- eternal guardian
 		addon:EncodeRequiredData(optionalKeys.SPEC, specs[classes.hunter]["Beast Mastery"], optionalKeys.PET, "Quilen")
 	)
 	-- MAGE
-		-- sweet utility, guy
+    addon:AddCooldown(159916, classes.mage, nil, nil, 6) -- amplify magic
 	-- MONK
 	addon:AddCooldown(115176, classes.monk, nil, nil, 8) -- zen meditation
 	addon:AddCooldownFromSpec(116849, classes.monk, nil, nil, 12, specs[classes.monk]["Mistweaver"]) -- life cocoon
 	addon:AddCooldownFromSpec(115310, classes.monk, nil, nil, nil, specs[classes.monk]["Mistweaver"]) -- revival
-	addon:AddCooldownFromSpec(115213, classes.monk, nil, nil, 6, specs[classes.monk]["Brewmaster"]) -- avert harm
 	-- PALADIN
 	addon:AddCooldown(1038, classes.paladin, nil, nil, 10, nil, -- salv
 		{
@@ -83,20 +78,17 @@ function addon:InitializeDefaultCooldowns()
 		}
 	)
 	addon:AddCooldownFromTalent(114039, classes.paladin, nil, nil, 6, 10) -- hand of purity
-	addon:AddCooldown(31821, classes.paladin, nil, nil, 6, nil, -- devotion aura
+	addon:AddCooldownFromSpec(31821, classes.paladin, nil, nil, 6, specs[classes.paladin]["Holy"], -- devotion aura
 		{
 			[filterKeys.CD] = addon:EncodeModificationData(60, "-", optionalKeys.GLYPH, 146955),
 		}
 	)
-	addon:AddSymbiosisCooldown(113269, classes.paladin, nil, nil, nil, specs[classes.paladin]["Holy"], 110484) -- symbiosis rebirth
 	-- PRIEST
-	addon:AddCooldown(64901, classes.priest, nil, nil, 8) -- hymn of hope
 	addon:AddCooldownFromSpec(15286, classes.priest, nil, nil, 15, specs[classes.priest]["Shadow"], -- vamp embrace
 		{
 			[filterKeys.BUFF_DURATION] = addon:EncodeModificationData(5, "-", optionalKeys.GLYPH, 120584),
 		}
 	)
-	addon:AddSymbiosisCooldown(113277, classes.priest, nil, nil, 8, specs[classes.priest]["Shadow"], 110485) -- symbiosis tranq
 	addon:AddCooldownFromSpec(47788, classes.priest, nil, nil, 10, specs[classes.priest]["Holy"]) -- guardian spirit
 	addon:AddCooldownFromSpec(64843, classes.priest, nil, nil, 8, specs[classes.priest]["Holy"]) -- divine hymn
 	addon:AddCooldownFromSpec(33206, classes.priest, nil, nil, 8, specs[classes.priest]["Discipline"]) -- pain suppression
@@ -109,21 +101,17 @@ function addon:InitializeDefaultCooldowns()
 	)
 	-- SHAMAN
 	addon:AddCooldown(20608, classes.shaman) -- ankh
-	addon:AddCooldown(120668, classes.shaman, nil, nil, 10) -- stormlash
-	addon:AddCooldown(108280, classes.shaman, nil, nil, 12) -- healing tide
+	addon:AddCooldownFromSpec(108280, classes.shaman, nil, nil, 12, specs[classes.shaman]["Restoration"]) -- healing tide
 	addon:AddCooldownFromTalent(108281, classes.shaman, nil, nil, 10, 14) -- ancestral guidance
 	addon:AddCooldownFromTalent(108273, classes.shaman, nil, nil, 6, 6) -- windwalk
-	addon:AddCooldownFromSpec(16190, classes.shaman, nil, nil, 16, specs[classes.shaman]["Restoration"]) -- mana tide
+	--addon:AddCooldownFromSpec(16190, classes.shaman, nil, nil, 16, specs[classes.shaman]["Restoration"]) -- mana tide
 	addon:AddCooldownFromSpec(98008, classes.shaman, nil, nil, 6, specs[classes.shaman]["Restoration"]) -- spirit link
 	-- WARLOCK
 	addon:AddCooldown(20707, classes.warlock) -- soulstone
 	-- WARRIOR
 	addon:AddCooldown(64382, classes.warrior, nil, nil, 10) -- shattering throw
-	addon:AddCooldown(114207, classes.warrior, nil, nil, 10) -- skull banner
-	addon:AddCooldown(114203, classes.warrior, nil, nil, 15) -- demo banner
-	addon:AddCooldown(97462, classes.warrior, nil, nil, 10) -- rallying cry
+	addon:AddCooldownFromSpec(97462, classes.warrior, nil, nil, 10, -specs[classes.warrior]["Protection"]) -- rallying cry
 	addon:AddCooldownFromTalent(114030, classes.warrior, nil, nil, 12, 15) -- vigilance
-	addon:AddSymbiosisCooldown(122294, classes.warrior, nil, nil, 8, -(specs[classes.warrior]["Protection"]), 110491) -- symbiosis stampeding shout
 	
 	-- this should only be called a single time
 	addon.InitializeDefaultCooldowns = nil
