@@ -40,6 +40,7 @@ local MESSAGES = {
 	BREZ_ACCEPT = "BREZ_ACCEPT",
 	BREZ_RESET = "BREZ_RESET",
 	BREZ_OUT = "BREZ_OUT", -- TODO: needed?
+    BREZ_RECHARGED = "BREZ_RECHARGED",
 	
 	-- displays send out messages for elements to respond to
 	-- the base display frames are invisible which house logic for its constituent elements
@@ -396,10 +397,20 @@ local BREZ_IDS = {
 	[61999] = true, --dk
 	[20484] = true, --druid
 	[126393] = true, --hunter
-	[113269] = true, --hpal symbiosis
 	[20707] = true, --lock
 }
 consts.BREZ_IDS = BREZ_IDS
+
+-- http://wowpedia.org/Patch_6.0.2/API_changes#Changes
+local GUID_TYPES = {
+    PLAYER = "Player",
+    PET = "Pet",
+    CREATURE = "Creature",
+    GAMEOBJECT = "GameObject",
+    VEHICLE = "Vehicle",
+    VIGNETTE = "Vignette", -- ??? rare spawn, i guess???
+}
+consts.GUID_TYPES = GUID_TYPES
 
 -- ------------------------------------------------------------------
 -- Misc.

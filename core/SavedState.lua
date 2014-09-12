@@ -9,7 +9,7 @@ local addon = Overseer
 local consts = addon.consts
 local GetUnitFromGUID = addon.GetUnitFromGUID
 local GUIDClassColoredName = addon.GUIDClassColoredName
-local Cooldowns -- addon.Cooldowns (which has not been instantiated yet)
+local Cooldowns -- addon.Cooldowns (not instantiated yet)
 
 local INDENT = consts.INDENT
 local CD_DURATION = "CD_DURATION"
@@ -17,16 +17,17 @@ local CHARGES = "CHARGES"
 local BUFF_DURATION = "BUFF_DURATION"
 local CHARGES_ON_CD = "CHARGES_ON_CD"
 local START_TIME = "START_TIME"
+local BREZ_RECHARGE_TIME = "BREZ_RECHARGE_TIME"
+local BREZ_CURRENT = "BREZ_CURRENT"
 
 -- ------------------------------------------------------------------
 -- Instantiation
 -- ------------------------------------------------------------------
 --[[
 OverseerSavedState = {
-	core saved state: at the moment, just cooldown information
 	cannot save guid state/talent/glyph info in case the person has changed anything in the interim
 	
-	form:
+	spell state form:
 	[guid] = {
 		[spellid] = {
 			[CD_DURATION] = duration of spell's cooldown,
@@ -38,6 +39,10 @@ OverseerSavedState = {
 		...
 	},
 	...
+    
+    brez information:
+    [BREZ_RECHARGE_TIME] = time at which the next brez charge will be gained (compare with time()),
+    [BREZ_CURRENT] = current brez charges,
 }
 --]]
 local SavedState
@@ -171,8 +176,8 @@ local function Load(self, elapsed)
 	end
 end
 
-function addon:LoadSavedState()
-	self:FUNCTION(":LoadSavedState()")
+function addon:LoadSavedCooldownState()
+	self:FUNCTION(":LoadSavedCooldownState()")
 	
 	SavedState = OverseerSavedState
 	if SavedState then
@@ -185,14 +190,23 @@ function addon:LoadSavedState()
 				frame:Show()
 			end
 		else
-			local msg = ":LoadSavedState(): Failed! Cooldowns structure missing!"
+			local msg = ":LoadSavedCooldownState(): Failed! Cooldowns structure missing!"
 			self:DEBUG(msg)
 		end
 	end
 end
 
+function addon:GetSavedBrezState()
+	self:FUNCTION(":LoadSavedCooldownState()")
+	
+	SavedState = OverseerSavedState
+	if SavedState then
+        return SavedState[BREZ_CURRENT], SavedState[BREZ_RECHARGE_TIME]
+    end
+end
+
 -- ------------------------------------------------------------------
--- Save state information
+-- Cooldown Save state information
 -- ------------------------------------------------------------------
 function addon:WipeSavedCooldownState(guid, spellid)
 	self:FUNCTION(":WipeSavedCooldownState(%s): %s", GUIDClassColoredName(guid), GetSpellInfo(spellid))
@@ -229,4 +243,24 @@ function addon:SaveCooldownState(spellCD, start)
 	SavedState[guid][spellid] = cdInfo
 	
 	--self:DebugSavedState()
+end
+
+-- ------------------------------------------------------------------
+-- Brez Save state information
+-- ------------------------------------------------------------------
+
+function addon:WipeSavedBrezState()
+    self:FUNCTION(":WipeSavedBrezState()")
+    
+    SavedState = SavedState or OverseerSavedState
+    SavedState[BREZ_CURRENT] = nil
+    SavedState[BREZ_RECHARGE_TIME] = nil
+end
+
+function addon:SaveBrezState(brezCount, nextRecharge)
+    self:FUNCTION(":SaveBrezState(): brezCount=%s, lastRecharge=%s, rechargeDuration=%s", brezCount, lastRecharge, rechargeDuration)
+    
+    SavedState = SavedState or OverseerSavedState
+    SavedState[BREZ_CURRENT] = brezCount
+    SavedState[BREZ_RECHARGE_TIME] = nextRecharge or SavedState[BREZ_RECHARGE_TIME]
 end

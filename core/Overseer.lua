@@ -21,6 +21,7 @@ local SCAN_CLASS_INTERVAL = consts.SCAN_CLASS_INTERVAL
 -- ------------------------------------------------------------------
 addon.isFightingBoss = nil
 addon.benchGroup = NUM_MAX_GROUPS + 1
+addon.instanceGroupSize = 1
 
 do -- helper frame
 	local frame = CreateFrame(consts.FRAME_TYPES.FRAME)
@@ -201,8 +202,8 @@ function addon:OnEnable()
 	self:SetPlayerZone()
 	self:Inspect("player")
 	self:ScanGroup(true) -- in case of client disconnect or reload
-	self:ValidateBrezCount()
 	self:ValidateBenchGroup()
+    self:INSTANCE_GROUP_SIZE_CHANGED("INSTANCE_GROUP_SIZE_CHANGED") -- not sure if this fires when first zoning in/joining raid, so force a call
 	
 	self:RegisterBucketEvent("GROUP_ROSTER_UPDATE", 0.5)
 	self:RegisterBucketEvent("UNIT_NAME_UPDATE", 2)
@@ -217,6 +218,7 @@ function addon:OnEnable()
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED") -- catch cd usage & group members changing specs/talents/glyphs (note: CLEU version does not catch the latter)
 	self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED") -- player changing specs (seems to sometimes fire for other players as well)
 	self:RegisterEvent("PLAYER_DEAD")
+    self:RegisterEvent("INSTANCE_GROUP_SIZE_CHANGED")
 	self:RegisterEvent("ZONE_CHANGED_NEW_AREA") -- zoning into/out of instance
 	
 	-- catch non-encounter deaths/resses
@@ -227,6 +229,8 @@ function addon:OnEnable()
 		-- high probability that the player reloaded or dc'd while in combat with a boss
 		-- fake an ENCOUNTER_START event
 		self:ENCOUNTER_START()
+    else
+        self:WipeSavedBrezState()
 	end
 end
 

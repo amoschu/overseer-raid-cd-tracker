@@ -222,6 +222,18 @@ function addon.ToBool(value)
 	return value and true or false
 end
 
+function addon.SecondsToString(seconds)
+    local minutes = seconds / 60
+    local hours = minutes / 60
+    if seconds < 60 then
+        return ("%ds"):format(seconds)
+    elseif hours > 1 then
+        return ("%d:%02d:%02d"):format(floor(hours), minutes % 60, seconds % 60)
+    elseif minutes > 1 then
+        return ("%d:%02d"):format(floor(minutes), seconds % 60)
+    end
+end
+
 function addon.GetUnitFromGUID(guid)
 	return type(guid) == "string" and guid:len() > 0 and select(6, GetPlayerInfoByGUID(guid))
 end

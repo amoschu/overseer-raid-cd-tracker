@@ -143,6 +143,7 @@ function addon:ENCOUNTER_START(event, encounterID, encounterName, difficultyId, 
 		-- this sometimes fires when wiping (with no paired _END event when the actual wipe happens)
 		-- moreover, no additional _START event is fired for the next pull
 		-- so, let's watch for some relevant CLEUs that may indicate that we actually engaged a boss
+        -- I believe this happens when a priest SOR is hanging around when the boss despawns (_END event is thrown)
 		self:SubscribeCLEUEvent("SWING_DAMAGE")
 		self:SubscribeCLEUEvent("RANGE_DAMAGE")
 		self:SubscribeCLEUEvent("SPELL_DAMAGE")
@@ -154,7 +155,6 @@ local function DisengageBoss(isWipe)
 	-- note: cannot check IsEncounterInProgress b/c the _END event is sometimes thrown before the api call yields false
 	if addon.isFightingBoss then
 		addon.isFightingBoss = nil
-		addon:ResetBrezCount()
 		addon:DisableBrezScan()
 		addon.Cooldowns:ResetCooldowns()
 		addon:StartOoCResScan() -- will scan once if none dead
@@ -365,16 +365,15 @@ end
 function addon:ValidateBenchGroup()
 	-- set the first subgroup number that is considered to be benched
 	-- ie, anyone in any subgroup >= bench is not someone whose cooldowns we care about
-	local maxPlayers = select(5, GetInstanceInfo()) or 0
-	local benchGroup = ceil(maxPlayers / NUM_PLAYERS_PER_GROUP)
+	local instanceGroupSize = select(9, GetInstanceInfo()) or 0
+	local benchGroup = ceil(instanceGroupSize / NUM_PLAYERS_PER_GROUP)
 	benchGroup = (benchGroup == 0) and NUM_MAX_GROUPS + 1 or benchGroup + 1
-	
 	if benchGroup ~= self.benchGroup then
 		-- benched group changed
 		self.benchGroup = benchGroup
 		GroupCache:SetState()
 		
-		self:FUNCTION(":ValidateBenchGroup(%s): new bench group=%d", tostring(maxPlayers), benchGroup)
+		self:FUNCTION(":ValidateBenchGroup(%s): new bench group=%d", tostring(instanceGroupSize), benchGroup)
 	end
 end
 
@@ -415,7 +414,6 @@ function addon:ZONE_CHANGED_NEW_AREA(event)
 	
 	DisengageBoss() -- in case the player zones out while in combat with a boss
 	if IsInGroup() then
-		self:ValidateBrezCount()
 		self:ValidateBenchGroup()
 		PlayerGhostFormUpkeep()
 		
@@ -466,6 +464,22 @@ function addon:PLAYER_DEAD(event)
 	playerDied = true
 	self:RegisterEvent("PLAYER_ALIVE") -- this seems to be attached to zoning..
 	self:RegisterEvent("PLAYER_UNGHOST") -- need in case player is resurrected w/o zoning
+end
+
+-- ------------------------------------------------------------------
+-- INSTANCE_GROUP_SIZE_CHANGED
+-- ------------------------------------------------------------------
+function addon:INSTANCE_GROUP_SIZE_CHANGED(event)
+    self:FUNCTION(event)
+
+    local instanceGroupSize = select(9, GetInstanceInfo()) or 0
+    -- TODO: is there a lower bound for brez purposes? .. instanceGroupSize = min(10, instanceGroupSize)
+    if addon.instanceGroupSize ~= instanceGroupSize then
+        -- cache the new instance group size for brez charge timing
+        addon.instanceGroupSize = instanceGroupSize
+        -- TODO: does the brez timer update mid-fight?
+        --   if so, update the brez charge timer immediately if EncounterInProgress
+    end
 end
 
 -- ------------------------------------------------------------------

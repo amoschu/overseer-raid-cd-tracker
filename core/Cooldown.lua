@@ -13,6 +13,8 @@ local GetSpellBaseCooldownSeconds = addon.GetSpellBaseCooldownSeconds
 local GUIDClassColoredName = addon.GUIDClassColoredName
 local GUIDClassColorStr = addon.GUIDClassColorStr
 
+local READY = 0
+local BREZ_IDS = consts.BREZ_IDS
 local ANKH_ID = consts.ANKH_ID
 local MESSAGES = consts.MESSAGES
 local MSEC_PER_SEC = consts.MSEC_PER_SEC
@@ -33,6 +35,17 @@ local deadCooldowns = {
 	form:
 	SpellCooldown,
 	SpellCooldown,
+	...
+	--]]
+}
+
+local onCooldown = {
+	--[[
+	spells on cooldown (for updating)
+	
+	form:
+	[spellCD] = true,
+	[spellCD] = true,
 	...
 	--]]
 }
@@ -73,7 +86,7 @@ local Cooldowns = {
 	
 	form:
 	[id] = {
-		[guid] = CooldownBase, -- stores the state of the person's cooldown
+		[guid] = SpellCooldown, -- stores the state of the person's cooldown
 		...
 	},
 	...
@@ -176,9 +189,53 @@ function Cooldowns:ResetCooldowns()
 	end
 end
 
+local function KillCooldown(spell)
+	if spell.start and spell.start ~= READY then
+		spell.start = READY
+		spell.expire = READY
+		onCooldown[spell] = nil
+		
+		-- update the sorted list of cooldowns
+		local idx
+		local sorted = SortedCooldowns[spell.spellid]
+		for i = 1, #sorted do
+			local spellCD = sorted[i]
+			if spell == spellCD then
+				idx = i
+				break
+			end
+		end
+		if idx then
+			-- in most cases, this should remove the first element
+			remove(sorted, idx)
+		end
+	end
+end
+
+local function ResetCooldown(cd)
+    KillCooldown(cd)
+    cd.chargesOnCD = 0
+    addon:WipeSavedCooldownState(cd.guid, cd.spellid)
+    
+    addon:COOLDOWN(":Reset(%s): |c%s%s|r(%s)", GUIDClassColoredName(cd.guid), GUIDClassColorStr(cd.guid), tostring(GetSpellInfo(cd.spellid)), tostring(cd.spellid))
+    addon:SendMessage(MESSAGES.CD_RESET, cd)
+end
+
+function Cooldowns:ResetBrezCooldowns()
+    for spellid, spells in next, self do
+		if type(spells) == "table" then -- skip these functions
+            for guid, cd in next, spells do
+                if BREZ_IDS[cd.spellid] then
+                    ResetCooldown(cd)
+                end
+            end
+        end
+    end
+end
+
 function Cooldowns:Initialize()
 	SpellCooldown:Initialize()
-	addon:LoadSavedState()
+	addon:LoadSavedCooldownState()
 end
 	
 -- clears all tracking information
@@ -273,7 +330,6 @@ end
 -- ------------------------------------------------------------------
 -- Spell cooldown class
 -- ------------------------------------------------------------------
-local READY = 0
 SpellCooldown = {} -- local, fwd declared at the top
 SpellCooldown.READY = READY
 SpellCooldown.__index = SpellCooldown
@@ -311,16 +367,6 @@ local buffUseTimes = {
 	--]]
 }
 
-local onCooldown = {
-	--[[
-	spells on cooldown (for updating)
-	
-	form:
-	[spellCD] = true,
-	[spellCD] = true,
-	...
-	--]]
-}
 local StartCooldown, StartUpdateTimer, StopUpdateTimer
 local updateTimer
 local latencyTimer
@@ -348,29 +394,6 @@ function SpellCooldown:Shutdown()
 		addon:CancelTimer(latencyTimer)
 	end
 	StopUpdateTimer()
-end
-
-local function KillCooldown(spell)
-	if spell.start and spell.start ~= READY then
-		spell.start = READY
-		spell.expire = READY
-		onCooldown[spell] = nil
-		
-		-- update the sorted list of cooldowns
-		local idx
-		local sorted = SortedCooldowns[spell.spellid]
-		for i = 1, #sorted do
-			local spellCD = sorted[i]
-			if spell == spellCD then
-				idx = i
-				break
-			end
-		end
-		if idx then
-			-- in most cases, this should remove the first element
-			remove(sorted, idx)
-		end
-	end
 end
 
 local function OnFinish(spell)
@@ -641,8 +664,14 @@ end
 
 local DOES_NOT_RESET = { -- list of spellids that do not reset
 	[ANKH_ID] = true,
-	-- is ankh the only spell that doesn't reset?
 }
+do
+    -- don't reset brezzes (in 6.0, they reset on engage and not when cds normally do)
+    for spellid in next, BREZ_IDS do
+        DOES_NOT_RESET[spellid] = true
+    end
+end
+
 local DOES_RESET = {
 	-- list of spellids which reset even though their cd is less than the minimum time
 	-- ..I wish there was better documentation on how this system works or that it even exists in the first place
@@ -653,12 +682,7 @@ function SpellCooldown:Reset()
 	if DOES_NOT_RESET[self.spellid] then return end
 
 	if self.duration >= MIN_DURATION_FOR_RESET or DOES_RESET[self.spellid] then
-		KillCooldown(self)
-		self.chargesOnCD = 0
-		addon:WipeSavedCooldownState(self.guid, self.spellid)
-		
-		addon:COOLDOWN(":Reset(%s): |c%s%s|r(%s)", GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid))
-		addon:SendMessage(MESSAGES.CD_RESET, self)
+        ResetCooldown(self)
 	end
 end
 

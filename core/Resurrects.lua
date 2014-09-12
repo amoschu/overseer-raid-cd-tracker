@@ -1,8 +1,8 @@
 
-local type, select, wipe, inf
-	= type, select, wipe, math.huge
-local GetTime, GetInstanceInfo, GetPlayerInfoByGUID, GetSpellInfo, GetNumGroupMembers, GetRaidRosterInfo, IsEncounterInProgress
-	= GetTime, GetInstanceInfo, GetPlayerInfoByGUID, GetSpellInfo, GetNumGroupMembers, GetRaidRosterInfo, IsEncounterInProgress
+local type, time, select, wipe, inf
+	= type, time, select, wipe, math.huge
+local GetTime, GetInstanceInfo, GetRaidDifficultyID, GetPlayerInfoByGUID, GetSpellInfo, GetNumGroupMembers, GetRaidRosterInfo, IsEncounterInProgress
+	= GetTime, GetInstanceInfo, GetRaidDifficultyID, GetPlayerInfoByGUID, GetSpellInfo, GetNumGroupMembers, GetRaidRosterInfo, IsEncounterInProgress
 local UnitGUID, UnitIsDeadOrGhost, UnitIsConnected, UnitAffectingCombat, UnitClass, UnitBuff
 	= UnitGUID, UnitIsDeadOrGhost, UnitIsConnected, UnitAffectingCombat, UnitClass, UnitBuff
 
@@ -21,23 +21,6 @@ local ANKH_ID = consts.ANKH_ID
 local MESSAGES = consts.MESSAGES
 local PENDING_REZ_EXPIRE = 60 + 5 -- pending rez = 60s timer
 local PRECAST_SOULSTONE = -9999 -- just a value that cannot be reached on accident
-local BREZ_MAX = {
-	--[[
-	the max number of combat rezzes keyed by instance size
-	
-	form:
-	instanceSize = maxBrezCount,
-	...
-	--]]
-	
-    -- TODO: what is the max brez count for LFR, Flex? (I think LFR has no limit?)
-    -- TODO: need to include difficulty here somehow
-	[0] = inf,
-	[10] = 1,
-	[15] = 2, -- TODO: no idea what the brez count is for 15man (or if they will ever reintroduce a 15man instance)
-	[20] = 3, -- TODO: fix when 6.0 hits
-	[25] = 3,
-}
 
 local rezzers = {
 	--[[
@@ -79,7 +62,7 @@ local dead = {
 
 local deadCount = 0
 local brezCount = 0 -- the current remaining number of combat resses
-local currentBrezMax = BREZ_MAX[0]
+local brezRechargeTimer = nil
 
 -- ------------------------------------------------------------------
 -- Resurrection handling
@@ -89,8 +72,10 @@ local function ClearBrezCacheFor(guid)
 	pendingRez[guid] = nil
 end
 
-local SendChatMessage = SendChatMessage -- TODO: TMP
+-- TODO: TMP
+local SendChatMessage = SendChatMessage
 local GUIDName = addon.GUIDName -- TODO: TMP
+local SecondsToString = addon.SecondsToString -- TODO: TMP
 local rezSrcMsg = "         %d resurrects used: %s"
 local BROADCAST_TYPE = "RAID" -- TODO: TMP
 local BROADCAST_BREZ = { -- TODO: TMP
@@ -98,10 +83,35 @@ local BROADCAST_BREZ = { -- TODO: TMP
 	[4] = true, -- 25
 	--[5] = true, -- 10 h
 	[6] = true, -- 25 h
+    
+    -- 6.0:
+    -- [14] = true, -- normal (flex)
+    [15] = true, -- heroic (normal)
+    [16] = true, -- mythic (heroic)
+    -- [17] = true, -- LFR
 }
+local function NextChargeTime()
+    local timeLeftSec = addon:TimeLeft(brezRechargeTimer)
+    if timeLeftSec > 0 then
+        return SecondsToString(timeLeftSec)
+    else
+        addon:DEBUG("NextChargeTime(): brezRechargeTimer is invalid!")
+        return "??s"
+    end
+end
+--
+
+local function GetRechargeTimeSec()
+    return 60 * 90 / addon.instanceGroupSize
+end
+
+local function SaveBrezInfo(saveNextRecharge)
+    addon:SaveBrezState(brezCount, saveNextRecharge and (time() + GetRechargeTimeSec()))
+end
+
 local function AcceptBrezFor(guid)
-	brezCount = brezCount - 1
-	addon:SendMessage(MESSAGES.BREZ_ACCEPT, brezCount, guid, rezzers[guid])
+    brezCount = brezCount - 1
+    SaveBrezInfo()
 	
 	-- logging output
 	local numUsed = 0
@@ -119,12 +129,13 @@ local function AcceptBrezFor(guid)
 	
 	if brezCount >= 0 then
 		-- TODO: TMP
-		local difficulty = select(3, GetInstanceInfo()) or 0
+		local difficulty = GetRaidDifficultyID() or 0
 		if BROADCAST_BREZ[difficulty] then
-			SendChatMessage(("%s came back to life! (%d used)"):format(GUIDName(guid), numUsed), BROADCAST_TYPE)
-            SendChatMessage(("%d resurrect%s remaining"):format(brezCount, brezCount == 1 and "" or "s"), BROADCAST_TYPE)
+			SendChatMessage(("%s came back to life!"):format(GUIDName(guid)), BROADCAST_TYPE)
+            SendChatMessage(("%d resurrect%s remaining (next charge in %s)"):format(brezCount, brezCount == 1 and "" or "s", NextChargeTime()), BROADCAST_TYPE)
 		end
 		--
+        addon:SendMessage(MESSAGES.BREZ_ACCEPT, brezCount, guid, rezzers[guid])
 		
 		addon:PRINT("AcceptBrezFor(): %s came back to life! (%d remaining)", GUIDClassColoredName(guid), brezCount)
 		addon:PRINT(rezSrcMsg, numUsed, rezSrc)
@@ -186,7 +197,7 @@ function addon:UNIT_HEALTH_FREQUENT(event, unit)
 					-- possible shaman reincarnate
 					-- I don't think a shaman can ankh if they were combat rezzed
 					-- TODO: does this work if we miss shaman reincarnating and dying instantly?
-					-- TODO: this misses non-boss combat ankhs
+					-- TODO: this misses non-boss combat ankhs due to how/when we listen for thi
 					local ankh = Cooldowns[ANKH_ID] and Cooldowns[ANKH_ID][guid]
 					if ankh and ankh:NumReady() > 0 then
 						ankh:Use()
@@ -259,6 +270,24 @@ local function OutOfCombatResScan()
 	end
 end
 
+local function BrezRecharge(scheduleRepeating)
+    brezCount = brezCount + 1
+    SaveBrezInfo(true)
+    addon:SendMessage(MESSAGES.BREZ_RECHARGED, brezCount)
+    
+    -- TODO: TMP
+    local difficulty = GetRaidDifficultyID() or 0
+    if BROADCAST_BREZ[difficulty] then
+        SendChatMessage(("%d ressurect%s available (next charge in %s)"):format(brezCount, brezCount == 1 and "" or "s", NextChargeTime()), BROADCAST_TYPE)
+    end
+    --
+    
+    if scheduleRepeating then
+        addon:CancelTimer(brezRechargeTimer)
+        brezRechargeTimer = addon:ScheduleRepeatingTimer(BrezRecharge, GetRechargeTimeSec())
+    end
+end
+
 -- ------------------------------------------------------------------
 -- Public functions
 -- ------------------------------------------------------------------
@@ -293,27 +322,6 @@ function addon:CastBrezOn(destGUID, srcGUID, isPrecastSoulstone)
 	else
 		pendingRez[destGUID] = PRECAST_SOULSTONE
 	end
-end
-
-function addon:ResetBrezCount()
-	self:FUNCTION(":ResetBrezCount()")
-	brezCount = currentBrezMax
-	addon:SendMessage(MESSAGES.BREZ_RESET, brezCount)
-end
-
-function addon:ValidateBrezCount()
-	local maxPlayers = select(5, GetInstanceInfo()) or 0
-	currentBrezMax = BREZ_MAX[maxPlayers]
-	if not currentBrezMax then
-		local msg = ":ValidateBrezCount(): No max brez count set for instance size=%s, defaulting to infinite."
-		self:DEBUG(msg, tostring(maxPlayers))
-		
-		currentBrezMax = BREZ_MAX[0]
-	end
-	
-	brezCount = currentBrezMax
-	addon:SendMessage(MESSAGES.BREZ_RESET, brezCount)
-	self:FUNCTION(":ValidateBrezCount(%s): max=%d", tostring(maxPlayers), tostring(currentBrezMax))
 end
 
 local brezScanTimer
@@ -371,6 +379,35 @@ function addon:EnableBrezScan()
 			self:CastBrezOn(destGUID, srcGUID, true)
 		end
 	end
+    
+    -- start the recharge timer
+    --[[
+        6.0 changes: http://us.battle.net/wow/en/blog/13423478/warlords-of-draenor%E2%84%A2-alpha-patch-notes-04-17-2014-4-18-2014#combat_rez
+        - during boss encounters all brez share a single raid-wide pool of charges
+        - at start of encounter, all brez cds are reset
+        - charges regen at a rate of 1 per 90/RaidSize
+        - charges decrement only if brez is accepted
+        TODO: what if someone leaves mid-fight? does the regen rate update dynamically or is it set only at the beginning of the fight?
+    --]]
+    local lastCount, nextRecharge = addon:GetSavedBrezState()
+    Cooldowns:ResetBrezCooldowns()
+    brezCount = lastCount or 1
+    if not nextRecharge then
+        brezRechargeTimer = self:ScheduleRepeatingTimer(BrezRecharge, GetRechargeTimeSec())
+        SaveBrezInfo(true)
+    else
+        local remaining = nextRecharge - time()
+        if remaining < 0 then
+            -- gained a charge while the client was not online
+            remaining = -remaining
+            brezCount = brezCount + 1
+            SaveBrezInfo(true)
+        end
+        -- schedule a one-off timer for the next charge
+        brezRechargeTimer = self:ScheduleTimer(BrezRecharge, GetRechargeTimeSec() - remaining, true)
+    end
+    
+	addon:SendMessage(MESSAGES.BREZ_RESET, brezCount)
 end
 
 function addon:DisableBrezScan()
@@ -378,6 +415,8 @@ function addon:DisableBrezScan()
 	-- if we're disabling, we should no longer care about any state we were maintaining
 	ClearAllDeadAndPending()
 	self:PauseBrezScan()
+    self:CancelTimer(brezRechargeTimer)
+    self:WipeSavedBrezState()
 	-- stop watching the CLEU events relevant to combat rezzes
 	self:UnsubscribeCLEUEvent("SPELL_AURA_APPLIED")
 	self:UnsubscribeCLEUEvent("UNIT_DIED")
