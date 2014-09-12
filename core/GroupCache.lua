@@ -266,7 +266,9 @@ function GroupCache:SetSpec(guid)
 	local unit = GetUnitFromGUID(guid)
 	local specId
 	if isPlayer then
-		specId = GetSpecializationInfo(GetSpecialization())
+        -- the player may not have chosen a spec yet
+        local spec = GetSpecialization()
+		specId = spec and GetSpecializationInfo(spec)
 	else
 		specId = unit and GetInspectSpecialization(unit)
 	end

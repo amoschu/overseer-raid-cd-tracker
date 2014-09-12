@@ -371,7 +371,7 @@ function addon.GUIDName(guid, stripRealm)
 end
 
 function addon.GetGUIDType(guid)
-    if (guid) ~= "string" then
+    if type(guid) ~= "string" then
         return
     end
     
