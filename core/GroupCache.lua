@@ -1,8 +1,8 @@
 
 local tostring, type, next, wipe, select, concat, remove, inf
 	= tostring, type, next, wipe, select, table.concat, table.remove, math.inf
-local GetNumGroupMembers, GetInspectSpecialization, GetGlyphSocketInfo, GetTalentInfo, GetRaidRosterInfo, GetSpellInfo, GetPlayerInfoByGUID, UnitExists
-	= GetNumGroupMembers, GetInspectSpecialization, GetGlyphSocketInfo, GetTalentInfo, GetRaidRosterInfo, GetSpellInfo, GetPlayerInfoByGUID, UnitExists
+local GetNumGroupMembers, GetInspectSpecialization, GetGlyphSocketInfo, GetTalentInfo, GetActiveSpecGroup, GetRaidRosterInfo, GetSpellInfo, GetPlayerInfoByGUID, UnitExists
+	= GetNumGroupMembers, GetInspectSpecialization, GetGlyphSocketInfo, GetTalentInfo, GetActiveSpecGroup, GetRaidRosterInfo, GetSpellInfo, GetPlayerInfoByGUID, UnitExists
 local GetSpecializationInfo, GetSpecialization, UnitGUID, UnitInRaid, UnitClass, UnitAffectingCombat, UnitIsDeadOrGhost, UnitIsConnected, IsInGroup, IsEncounterInProgress
 	= GetSpecializationInfo, GetSpecialization, UnitGUID, UnitInRaid, UnitClass, UnitAffectingCombat, UnitIsDeadOrGhost, UnitIsConnected, IsInGroup, IsEncounterInProgress
 
@@ -21,7 +21,8 @@ local GetUnitFromGUID = addon.GetUnitFromGUID
 local UnitClassColoredName, GUIDClassColoredName = addon.UnitClassColoredName, addon.GUIDClassColoredName
 
 local MESSAGES = consts.MESSAGES
-local MAX_NUM_TALENTS = MAX_NUM_TALENTS
+local MAX_TALENT_TIERS = MAX_TALENT_TIERS
+local NUM_TALENT_COLUMNS = NUM_TALENT_COLUMNS
 local NUM_GLYPH_SLOTS = NUM_GLYPH_SLOTS
 local CLASS_SCAN_INTERVAL = 5 * 60 -- interval to scan every person of a given class
 local TOO_LONG_SINCE_LAST_CLASS_SCAN = 2 * CLASS_SCAN_INTERVAL -- scans become forceable after this amount of time
@@ -192,7 +193,7 @@ local function RemoveFromClassCache(guid)
 			UnregisterEventsFor(class)
 		elseif classCache._count < 0 then
 			local msg = "GroupCache:Remove(%s): incorrect %s count = %d"
-			addon:Debug(msg:format(GUIDClassColoredName(guid), tostring(class), classCache._count))
+			addon:DEBUG(msg, GUIDClassColoredName(guid), tostring(class), classCache._count)
 		end
 	end
 end
@@ -318,12 +319,21 @@ function GroupCache:SetTalents(guid)
 			end
 			ClearTalents(guid)
 			-- set new talents
-			for i = 1, MAX_NUM_TALENTS do
-				local hasTalent = isPlayer and select(5, GetTalentInfo(i)) or select(5, GetTalentInfo(i, true, nil, unit, classId))
-				if hasTalent then
-					guidTalents[i] = true
-				end
-			end
+            local activeTalentGroup = GetActiveSpecGroup()
+            for tier = 1, MAX_TALENT_TIERS do
+                for col = 1, NUM_TALENT_COLUMNS do
+                    local hasTalent
+                    if isPlayer then
+                        hasTalent = select(4, GetTalentInfo(tier, col, activeTalentGroup))
+                    else
+                        -- 3rd argument (active dual spec) is ignored for inspects
+                        hasTalent = select(4, GetTalentInfo(tier, col, nil, true, unit))
+                    end
+                    if hasTalent then
+                        guidTalents[tier * col] = true
+                    end
+                end
+            end
 			-- broadcast changes
 			local diffCount = 0
 			for talent in next, oldState do
@@ -599,7 +609,7 @@ function GroupCache:SetPlayerInfo()
 	local playerGUID = addon.playerGUID
 	if not playerGUID then
 		local msg = "GroupCache:SetPlayerInfo(): Player GUID not set yet! Setting now.."
-		addon:Debug(msg)
+		addon:DEBUG(msg)
 		
 		playerGUID = UnitGUID("player")
 		addon.playerGUID = playerGUID
@@ -613,7 +623,7 @@ function GroupCache:SetPlayerInfo()
 		self:SetState(playerGUID)
 	else
 		local msg = "GroupCache:SetPlayerInfo(): |cffFF0000Could not retreive player GUID!|r"
-		addon:Debug(msg)
+		addon:DEBUG(msg)
 	end
 end
 
@@ -621,20 +631,10 @@ end
 -- Debugging
 -- ------------------------------------------------------------------
 do
-	-- http://wowprogramming.com/docs/api_types#guid
-	local AND = bit.band
-	local GUID_TYPE_PLAYER = 0
-	local GUID_TYPE_PET = 4
+	local GUID_TYPE_PLAYER = consts.GUID_TYPES.PLAYER
+    local GetGUIDType = addon.GetGUIDType
 	local function IsGUIDPlayer(guid)
-		-- eg, "0xF530007EAC083004"
-		-- not perfect, but should be good enough
-		local result = false
-		if type(guid) == "string" then
-			local isGUID = guid:len() == 18
-			local maskedUnitType = (tonumber(guid:sub(5,5), 16) or -1) % 8
-			result = isGUID and maskedUnitType == GUID_TYPE_PLAYER
-		end
-		return result
+		return GetGUIDType(guid) == GUID_TYPE_PLAYER
 	end
 	addon.IsGUIDPlayer = IsGUIDPlayer
 
@@ -642,12 +642,12 @@ do
 	local empty = consts.EMPTY
 	local function debugHeader(header, indentLevel)
 		indentLevel = indentLevel or 0
-		addon:Print(("%s|cffFF00FF>|r%s"):format(indent:rep(indentLevel), header), true)
+		addon:PRINT(true, "%s|cffFF00FF>|r%s", indent:rep(indentLevel), header)
 	end
 
 	local function debugEmpty(indentLevel)
 		indentLevel = indentLevel or 1
-		addon:Print(("%s%s"):format(indent:rep(indentLevel), empty), true)
+		addon:PRINT(true, "%s%s", indent:rep(indentLevel), empty)
 	end
 
 	local function debugCache(cache, indentLevel)
@@ -671,7 +671,7 @@ do
 					v = GUIDClassColoredName(v)
 				end
 				
-				addon:Print(("%s%s=%s"):format(indent:rep(indentLevel), tostring(k), tostring(v)), true)
+				addon:PRINT(true, "%s%s=%s", indent:rep(indentLevel), tostring(k), tostring(v))
 			end
 		end
 		return printedSomething
@@ -679,7 +679,7 @@ do
 
 	local validGroupCacheKeys = {}
 	function GroupCache:Debug(key)
-		addon:Print("GroupCache: ===============", true)
+		addon:PRINT(true, "GroupCache: ===============")
 		if type(key) == "string" then
 			key = key:upper()
 			local cache = self[key]
@@ -696,7 +696,7 @@ do
 						end
 					end
 				end
-				addon:Print( ("%sNo such key='%s'. Valid keys={%s}"):format(indent, key, concat(validGroupCacheKeys, ", ")), true )
+				addon:PRINT(true, "%sNo such key='%s'. Valid keys={%s}", indent, key, concat(validGroupCacheKeys, ", "))
 			end
 		else
 			-- print all
@@ -718,7 +718,7 @@ do
 		end
 		
 		if IsGUIDPlayer(guid) then
-			addon:Print(("GroupCache[%s]:"):format(GUIDClassColoredName(guid)), true)
+			addon:PRINT(true, "GroupCache[%s]:", GUIDClassColoredName(guid))
 			for k, cache in next, self do
 				if type(cache) == "table" then
 					-- special case pet (not keyed by unit guid)
@@ -730,14 +730,14 @@ do
 									debugEmpty()
 								end
 							else
-								addon:Print(("%s%s=%s"):format(indent, GUIDClassColoredName(guid), tostring(cache[guid])), true)
+								addon:PRINT(true, "%s%s=%s", indent, GUIDClassColoredName(guid), tostring(cache[guid]))
 							end
 						end
 					else
 						for pet, owner in next, cache do
 							if owner == guid then
 								debugHeader(k)
-								addon:Print(("%s%s=%s"):format(indent, tostring(pet), GUIDClassColoredName(owner)), true)
+								addon:PRINT(true, "%s%s=%s", indent, tostring(pet), GUIDClassColoredName(owner))
 								break
 							end
 						end
@@ -745,7 +745,7 @@ do
 				end
 			end
 		else
-			addon:Print(("GroupCache:UnitDebug() - could not get guid from '%s'"):format(tostring(input)), true)
+			addon:PRINT(true, "GroupCache:UnitDebug() - could not get guid from '%s'", tostring(input))
 		end
 	end
 
@@ -854,7 +854,7 @@ function addon:ScanGroup(force)
 	elseif not IsInGroup() then
 		return
 	end
-	self:PrintFunction(":ScanGroup()")
+	self:FUNCTION(":ScanGroup()")
 
 	invalidGUIDs = 0
 	wipe(currentMembers)
@@ -898,6 +898,6 @@ function addon:ScanGroup(force)
 	
 	if invalidGUIDs > 0 then
 		local msg = ":ScanGroup() %d GUIDs were invalid"
-		self:Debug(msg:format(invalidGUIDs))
+		self:DEBUG(msg, invalidGUIDs)
 	end
 end

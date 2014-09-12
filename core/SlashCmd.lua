@@ -23,7 +23,7 @@ local function OpenConfigWindow()
     else
         -- how? ..maybe :GetModule non-silently instead
         local msg = "No module named '%s' exists!"
-        addon:Debug(msg:format(OPTIONS_MODULE))
+        addon:DEBUG(msg, OPTIONS_MODULE)
     end
 end
 
@@ -34,7 +34,7 @@ function addon:LoadOptions()
 		local loaded, reason = LoadAddOn(OPTIONS)
 		if not loaded then
 			local msg = "Failed to load %s: %s."
-			addon:Warn(msg:format(OPTIONS, _G["ADDON_" .. reason]))
+			addon:WARN(msg, OPTIONS, _G["ADDON_" .. reason])
 		else
 			-- TODO - needed? ..I don't think there's a need to mess with Enable/Disable for the options module
 			--[[
@@ -43,7 +43,7 @@ function addon:LoadOptions()
 			--]]
 			
 			local msg = "%s loaded"
-			addon:Info(msg:format(OPTIONS))
+			addon:INFO(msg, OPTIONS)
             OpenConfigWindow()
 		end
 	end
@@ -56,17 +56,17 @@ local function LoadOptionsAndOpenWindow()
 		if enabled then
 			if InCombatLockdown() or UnitAffectingCombat("player") then
 				local msg = "Loading %s after combat ends."
-				addon:Info(msg:format(OPTIONS))
+				addon:INFO(msg, OPTIONS)
 				waitingToLoad = true
 			else
 				addon:LoadOptions()
 			end
         elseif reason == MISSING then
             local msg = "Could not locate an addon named '%s'. Was it renamed? Is it in your addons folder?"
-            addon:Error(msg:format(OPTIONS))
+            addon:ERROR(msg, OPTIONS)
 		else
 			local msg = "Could not load '%s' because it is not enabled."
-			addon:Error(msg:format(OPTIONS))
+			addon:ERROR(msg, OPTIONS)
 		end
     else
         OpenConfigWindow()
@@ -107,7 +107,7 @@ local usage = {
 }
 local validCmds = {}
 local function PrintValidCmds()
-	addon:Print(("%sValid commands: %s"):format(INDENT, concat(validCmds, ", ")), true)
+	addon:PRINT(true, "%sValid commands: %s", INDENT, concat(validCmds, ", "))
 end
 
 local commands = {}
@@ -129,12 +129,12 @@ commands["help"] = function(args)
 	end
 	
 	if #unrecognized > 0 then
-		addon:Print(("%sUnrecognized %s: %s"):format(INDENT, #unrecognized == 1 and "command" or "commands", concat(unrecognized, ", ")), true)
+		addon:PRINT(true, "%sUnrecognized %s: %s", INDENT, #unrecognized == 1 and "command" or "commands", concat(unrecognized, ", "))
 		PrintValidCmds()
 	elseif not printedAtLeastOne then
 		-- print generic usage
 		for i = 1, #usage do
-			addon:Print(usage[i], true)
+			addon:PRINT(true, usage[i])
 		end
 		PrintValidCmds()
 	end
@@ -173,7 +173,7 @@ commands["brez"] = function(args)
 		channel = type(target) == "number" and "CHANNEL" or CHANNELS[channel] or CHANNELS["ra"]
 		if channel == "WHISPER" and target == nil then
 			-- bad user input
-			addon:Warn(("%s brez %s: Who do you want to whisper? Usage: '%s brez %s name'"):format(slash1, args[1], slash1, args[1]))
+			addon:WARN("%s brez %s: Who do you want to whisper? Usage: '%s brez %s name'", slash1, args[1], slash1, args[1])
 		end
 		
 		-- TODO: are extraneous arguments discarded? eg, what happens if "RAID" is passed as 2nd arg and "playername" as 4th?
@@ -181,7 +181,7 @@ commands["brez"] = function(args)
 	else
 		-- help msg
 		local msg = "%s brez [channel]: Outputs current remaining battle resurrections to the specified channel. Has no effect when not fighting a boss. Defaults to raid."
-		addon:Print(msg:format(slash1), true)
+		addon:PRINT(true, msg, slash1)
 	end
 end
 
@@ -196,7 +196,7 @@ commands["unlock"] = function(args)
 		end
 	else
 		local msg = "%s unlock: Unlocks all active groups, allowing them to be repositioned or resized."
-		addon:Print(msg:format(slash1), true)
+		addon:PRINT(true, msg, slash1)
 	end
 end
 
@@ -205,13 +205,13 @@ commands["lock"] = function(args)
 		addon:LockAllMovables()
 	else
 		local msg = "%s lock: Locks all active displays, preventing any further repositioning or resizing."
-		addon:Print(msg:format(slash1), true)
+		addon:PRINT(true, msg, slash1)
 	end
 end
 
 commands["config"] = function(args)
 	if args then
-		addon:Print("[Config mode under construction - check back later]", true)
+		addon:PRINT(true, "[Config mode under construction - check back later]")
 		--
 		local onOff = args[1]
 		if onOff == "on" then
@@ -220,14 +220,14 @@ commands["config"] = function(args)
 			-- switch off
 		elseif onOff and onOff:len() > 0 then
 			local msg = "%s config: Did you want config mode 'on' or 'off'? You typed '%s'."
-			addon:Warn(msg:format(slash1, onOff))
+			addon:WARN(msg, slash1, onOff)
 		else
 			-- TODO: toggle
 		end
 		--
 	else
 		local msg = "%s config [on/off]: Toggles config mode on/off if specified, toggles if not specified."
-		addon:Print(msg:format(slash1), true)
+		addon:PRINT(true, msg, slash1)
 	end
 end
 
@@ -260,7 +260,7 @@ commands["debug"] = function(args)
 		end
 		if badCmdOrArg then
 			local msg = "Usage: %s debug [i/g/c/s [unit/key]]"
-			addon:Warn(msg:format(slash1))
+			addon:WARN(msg, slash1)
 		end
 	end
 end

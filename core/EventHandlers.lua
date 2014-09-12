@@ -46,7 +46,7 @@ local IS_RESURRECT = {
 -- fired when people release?
 -- ------------------------------------------------------------------
 function addon:GROUP_ROSTER_UPDATE()
-	self:PrintFunction("GROUP_ROSTER_UPDATE")
+	self:FUNCTION("GROUP_ROSTER_UPDATE")
 
 	if not IsInGroup() then
 		self:Disable()
@@ -60,7 +60,7 @@ end
 -- PLAYER_
 -- ------------------------------------------------------------------
 function addon:PLAYER_LOGIN(event)
-	self:PrintFunction(event)
+	self:FUNCTION(event)
 	
 	addon:UpdateClassColors()
 	-- start processing the inspect queue if there are any queued
@@ -69,7 +69,7 @@ function addon:PLAYER_LOGIN(event)
 end
 
 function addon:PLAYER_REGEN_ENABLED(event)
-	self:PrintFunction(event)
+	self:FUNCTION(event)
 	
 	if not self.isFightingBoss then
 		self:LoadOptions() -- try to load the options in case the user tried to load it in combat
@@ -90,7 +90,7 @@ end
 	unsure how reliable this event is for other people
 --]]
 function addon:PLAYER_SPECIALIZATION_CHANGED(event, unit)
-	self:PrintFunction(("%s(%s)"):format(event, UnitClassColoredName(unit)))
+	self:FUNCTION("%s(%s)", event, UnitClassColoredName(unit))
 	
 	if unit then -- fires with nil when it responds to a non-spec change..
 		local guid = UnitGUID(unit)
@@ -128,12 +128,11 @@ end
 
 function addon:ENCOUNTER_START(event, encounterID, encounterName, difficultyId, raidSize)
 	if event then
-		self:PrintFunction(("ENCOUNTER_START(eId=%s, eName=%s, difficulty=%s, raidSize=%s): IsEncounterInProgress()? %s"):format(
-			tostring(encounterID), tostring(encounterName), tostring(difficultyId), tostring(raidSize), tostring(IsEncounterInProgress())),
-			true
+		self:FUNCTION(true, "ENCOUNTER_START(eId=%s, eName=%s, difficulty=%s, raidSize=%s): IsEncounterInProgress()? %s", 
+			tostring(encounterID), tostring(encounterName), tostring(difficultyId), tostring(raidSize), tostring(IsEncounterInProgress())
 		)
 	else
-		self:PrintFunction(("FAKE ENCOUNTER_START(): IsEncounterInProgress()? %s"):format(tostring(IsEncounterInProgress())), true)
+		self:FUNCTION(true, "FAKE ENCOUNTER_START(): IsEncounterInProgress()? %s", tostring(IsEncounterInProgress()))
 	end
 	
 	if IsEncounterInProgress() then
@@ -165,9 +164,8 @@ local function DisengageBoss(isWipe)
 end
 
 function addon:ENCOUNTER_END(event, encounterID, encounterName, difficultyId, raidSize, win)
-	self:PrintFunction(("ENCOUNTER_END(eId=%s, eName=%s, difficulty=%s, raidSize=%s, win=%s)"):format(
-		tostring(encounterID), tostring(encounterName), tostring(difficultyId), tostring(raidSize), tostring(win)),
-		true
+	self:FUNCTION(true, "ENCOUNTER_END(eId=%s, eName=%s, difficulty=%s, raidSize=%s, win=%s)", 
+		tostring(encounterID), tostring(encounterName), tostring(difficultyId), tostring(raidSize), tostring(win)
 	)
 	
 	-- this should catch any relevant group member swaps
@@ -177,9 +175,8 @@ function addon:ENCOUNTER_END(event, encounterID, encounterName, difficultyId, ra
 	self:ProcessInspects() -- start up queued inspects since we are out of combat with a boss
 end
 
-local concat = table.concat -- TODO: TMP (trying to figure out what args, if any, are passed to this event)
 function addon:CHALLENGE_MODE_COMPLETED(event, ...)
-	addon:PrintFunction(("%s(%s)"):format(event, concat({...}, ", ")), true)
+	addon:FUNCTION(true, "%s(%s)", event)
 	
 	self.Cooldowns:ResetCooldowns()
 end
@@ -207,18 +204,18 @@ local DELAY_BEFORE_INSPECT = 5 -- a long-ish delay to hopefully catch all talent
 			-- fire an inspect after delay
 			-- may have to wait even longer depending on queue status
 			delayInspectTimers[guid] = addon:ScheduleTimer("Inspect", DELAY_BEFORE_INSPECT, unit)
-			addon:PrintFunction(("InspectUnitAfterDelay(%s)"):format(UnitClassColoredName(unit)), true)
+			addon:FUNCTION(true, "InspectUnitAfterDelay(%s)", UnitClassColoredName(unit))
 		end
 	else
 		local msg = "InspectUnitAfterDelay(%s) - could not retreive 'guid' from '%s'"
-		addon:Debug(msg:format(UnitClassColoredName(unit), tostring(unit)))
+		addon:DEBUG(msg, UnitClassColoredName(unit), tostring(unit))
 	end
 end
 
 -- tracking
 local function DebugMissedTracking(unit, spellid, spellname)
 	local msg = "|cffFF0000MISSED|r: %s casted |c%s%s|r(%s)"
-	addon:Debug( msg:format(UnitClassColoredName(unit), UnitClassColorStr(unit), tostring(spellname), tostring(spellid)) )
+	addon:DEBUG(msg, UnitClassColoredName(unit), UnitClassColorStr(unit), tostring(spellname), tostring(spellid))
 end
 
 local function UnitCastSpell(unit, spellid, spellname)
@@ -247,7 +244,7 @@ local function UnitCastSpell(unit, spellid, spellname)
 			
 			if cd then
 				local msg = "%s casted %s (%s)"
-				addon:PrintCLEU( msg:format(GUIDClassColoredName(guid), tostring(spellid), tostring(spellname)) )
+				addon:CLEU(msg, GUIDClassColoredName(guid), tostring(spellid), tostring(spellname))
 				
 				cd:Use()
 			else
@@ -258,7 +255,7 @@ local function UnitCastSpell(unit, spellid, spellname)
 		else
 			-- invalid unit somehow
 			local msg = "UNIT_SPELLCAST_SUCCEEDED(%s, %s, %s) - could not retreive 'guid' from 'unit', \"%s\""
-			addon:Debug(msg:format(UnitClassColoredName(unit), tostring(spellname), tostring(spellid), tostring(unit)))
+			addon:DEBUG(msg, UnitClassColoredName(unit), tostring(spellname), tostring(spellid), tostring(unit))
 		end
 	else
 		-- check data for this spell
@@ -289,7 +286,7 @@ local function IsSpecActivation(unit, spellid)
 	local result = false
 	if specActivation[spellid] then
 		result = UnitHasFilter(unit, optionalKeys.SPEC)
-		addon:Debug(("|cffFF0000IsSpecActivation|r(): %s changed specs! (hasFilter? |cff%s%s|r)"):format(UnitClassColoredName(unit), DebugGetHasFilterColor(result), tostring(result)))
+		addon:DEBUG("|cffFF0000IsSpecActivation|r(): %s changed specs! (hasFilter? |cff%s%s|r)", UnitClassColoredName(unit), DebugGetHasFilterColor(result), tostring(result))
 	end
 	
 	return result
@@ -300,7 +297,7 @@ local function IsTalentChange(unit, spellid)
 	local result = false
 	if spellid == TALENT_REMOVE_ID then
 		result = UnitHasFilter(unit, optionalKeys.TALENT)
-		addon:Debug(("|cffFF0000IsTalentChange|r(): %s changed talents! (hasFilter? |cff%s%s|r)"):format(UnitClassColoredName(unit), DebugGetHasFilterColor(result), tostring(result)))
+		addon:DEBUG("|cffFF0000IsTalentChange|r(): %s changed talents! (hasFilter? |cff%s%s|r)", UnitClassColoredName(unit), DebugGetHasFilterColor(result), tostring(result))
 	end
 	
 	return result 
@@ -311,7 +308,7 @@ local function IsGlyphChange(unit, spellid)
 	local result = false
 	if spellid == GLYPH_CHANGE_ID then
 		result = UnitHasFilter(unit, optionalKeys.GLYPH)
-		addon:Debug(("|cffFF0000IsGlyphChange|r(): %s changed glyphs! (hasFilter? |cff%s%s|r)"):format(UnitClassColoredName(unit), DebugGetHasFilterColor(result), tostring(result)))
+		addon:DEBUG("|cffFF0000IsGlyphChange|r(): %s changed glyphs! (hasFilter? |cff%s%s|r)", UnitClassColoredName(unit), DebugGetHasFilterColor(result), tostring(result))
 	end
 	
 	return result
@@ -323,7 +320,7 @@ function addon:UNIT_SPELLCAST_SUCCEEDED(event, unit, spellname, _, _, spellid)
         if IsSpecActivation(unit, spellid) or IsTalentChange(unit, spellid) or IsGlyphChange(unit, spellid) then
             InspectUnitAfterDelay(unit)
         elseif self:InspectNeedsRetry(unit) then
-            self:PrintFunction(("UNIT_SPELLCAST_SUCCEEDED(%s): needs retry so: trying |cffFF00FFinspect|r again.."):format(UnitClassColoredName(unit)))
+            self:FUNCTION("UNIT_SPELLCAST_SUCCEEDED(%s): needs retry so: trying |cffFF00FFinspect|r again..", UnitClassColoredName(unit))
             self:Inspect(unit, true)
         end
 	end
@@ -342,7 +339,7 @@ local NUM_MAX_GROUPS = consts.NUM_MAX_GROUPS
 local NUM_PLAYERS_PER_GROUP = consts.NUM_PLAYERS_PER_GROUP
 
 function addon:SetPlayerZone()
-	self:PrintFunction(":SetPlayerZone()")
+	self:FUNCTION(":SetPlayerZone()")
 	
 	local playerZone = GetRealZoneText()
 	
@@ -361,7 +358,7 @@ function addon:SetPlayerZone()
 		end
 	else
 		local msg = ":SetPlayerZone() - failed to retreive player zone"
-		self:Debug(msg)
+		self:DEBUG(msg)
 	end
 end
 
@@ -377,7 +374,7 @@ function addon:ValidateBenchGroup()
 		self.benchGroup = benchGroup
 		GroupCache:SetState()
 		
-		self:PrintFunction((":ValidateBenchGroup(%s): new bench group=%d"):format(tostring(maxPlayers), benchGroup))
+		self:FUNCTION(":ValidateBenchGroup(%s): new bench group=%d", tostring(maxPlayers), benchGroup)
 	end
 end
 
@@ -400,7 +397,7 @@ end
 local function PlayerGhostFormUpkeep()
 	local isDead = UnitIsDeadOrGhost("player")
 	local msg = "PlayerGhostFormUpkeep(): |cff00FF00releaseTime|r=%s, isDeadOrGhost? %s"
-	addon:PrintFunction(msg:format(tostring(playerReleasedTime), tostring(isDead)))
+	addon:FUNCTION(msg, tostring(playerReleasedTime), tostring(isDead))
 	if PlayerReleased() and not isDead then
 		-- player zoned in as a ghost (recovered body) or was resurrrected
 		playerDied = nil
@@ -414,7 +411,7 @@ local function PlayerGhostFormUpkeep()
 end
 
 function addon:ZONE_CHANGED_NEW_AREA(event)
-	self:PrintFunction(event)
+	self:FUNCTION(event)
 	
 	DisengageBoss() -- in case the player zones out while in combat with a boss
 	if IsInGroup() then
@@ -436,7 +433,7 @@ function addon:ZONE_CHANGED_NEW_AREA(event)
 				-- this is kind of shitty, but we need to make sure that our tracked state is ok
                 -- there is a possibility that someone changed their spec/talents/glyphs while the client was in ghost form (ie, out of range)
                 -- which potentially invalidates whatever the Cooldown state is - the problem is there is no telling who, if anyone, changed something
-				self:Print(("%s: |cffFF00FFreinspecting|r entire group.."):format(event))
+				self:PRINT("%s: |cffFF00FFreinspecting|r entire group..", event)
                 local NUM_GROUP_MEMBERS = GetNumGroupMembers()
                 for i = 1, NUM_GROUP_MEMBERS do
                     local name = GetRaidRosterInfo(i)
@@ -454,17 +451,17 @@ function addon:ZONE_CHANGED_NEW_AREA(event)
 end
 
 function addon:PLAYER_ALIVE(event)
-	self:PrintFunction(event)
+	self:FUNCTION(event)
 	PlayerGhostFormUpkeep()
 end
 
 function addon:PLAYER_UNGHOST(event)
-	self:PrintFunction(event)
+	self:FUNCTION(event)
 	PlayerGhostFormUpkeep()
 end
 
 function addon:PLAYER_DEAD(event)
-	self:PrintFunction(event)
+	self:FUNCTION(event)
 	
 	playerDied = true
 	self:RegisterEvent("PLAYER_ALIVE") -- this seems to be attached to zoning..
@@ -479,7 +476,7 @@ end
 -- ------------------------------------------------------------------
 local function UnitPortraitChange(unit)
 	if addon:InspectNeedsRetry(unit) then
-		addon:PrintFunction(("UnitPortraitChange(%s): needs retry so: trying |cffFF00FFinspect|r again.."):format(UnitClassColoredName(unit)))
+		addon:FUNCTION("UnitPortraitChange(%s): needs retry so: trying |cffFF00FFinspect|r again..", UnitClassColoredName(unit))
 		addon:Inspect(unit, true)
 	end
 	local guid = UnitGUID(unit)
@@ -507,10 +504,10 @@ function addon:UNIT_PORTRAIT_UPDATE(event, unit)
 					processedUnits = processedUnits:len() > 0 and ("%s, %s"):format(name, processedUnits) or name
 				end
 			end
-			self:PrintFunction(("UNIT_PORTRAIT_UPDATE: %s"):format(processedUnits))
+			self:FUNCTION("UNIT_PORTRAIT_UPDATE: %s", processedUnits)
 		else
 			-- regular wow event
-			self:PrintFunction(("%s: %s"):format(event, UnitClassColoredName(unit)))
+			self:FUNCTION("%s: %s", event, UnitClassColoredName(unit))
 			UnitPortraitChange(unit)
 		end
 	end
@@ -530,7 +527,7 @@ local function TrackUnitPet(unit)
 			addon:TrackCooldownsFor(guid)
 		else
 			local msg = "TrackUnitPet(%s) - could not retreive 'guid' from '%s'"
-			addon:Debug(msg:format(UnitClassColoredName(unit), tostring(unit)))
+			addon:DEBUG(msg, UnitClassColoredName(unit), tostring(unit))
 		end
 	end
 end
@@ -550,10 +547,10 @@ function addon:UNIT_PET(event, unit)
 		end
 		
 		-- buckets don't seem to help with UNIT_PET spam..
-		--self:PrintFunction(("UNIT_PET: %s"):format(processedUnits))
+		--self:FUNCTION("UNIT_PET: %s", processedUnits)
 	else
 		-- single event
-		--self:PrintFunction(("%s: %s"):format(tostring(event), UnitClassColoredName(unit)))
+		--self:FUNCTION("%s: %s", tostring(event), UnitClassColoredName(unit))
 		TrackUnitPet(unit)
 	end
 end
@@ -562,7 +559,7 @@ end
 -- UNIT_CONNECTION
 -- ------------------------------------------------------------------
 function addon:UNIT_CONNECTION(event, unit)
-	self:PrintFunction(("%s(%s)"):format(event, UnitClassColoredName(unit)))
+	self:FUNCTION("%s(%s)", event, UnitClassColoredName(unit))
 	
 	if not self.isFightingBoss and UnitIsConnected(unit) then
 		-- try rebooting the out-of-combat res scanner
@@ -575,7 +572,7 @@ function addon:UNIT_CONNECTION(event, unit)
 		GroupCache:SetState(guid)
 	else
 		local msg = "%s(%s) - could not retreive 'guid' from '%s'"
-		self:Debug(msg:format(tostring(event), UnitClassColoredName(unit), tostring(unit)))
+		self:DEBUG(msg, tostring(event), UnitClassColoredName(unit), tostring(unit))
 	end
 end
 
@@ -585,7 +582,7 @@ end
 -- ------------------------------------------------------------------
 local function UnitNameUpdate(unit)
 	if not addon.isFightingBoss and addon:InspectNeedsRetry(unit) then
-		addon:PrintFunction(("UnitNameUpdate(%s): needs retry so: trying |cffFF00FFinspect|r again.."):format(UnitClassColoredName(unit)))
+		addon:FUNCTION("UnitNameUpdate(%s): needs retry so: trying |cffFF00FFinspect|r again..", UnitClassColoredName(unit))
 		addon:Inspect(unit, true)
 	end
 end
@@ -603,9 +600,9 @@ function addon:UNIT_NAME_UPDATE(event, unit)
 			local name = ("%s(%d)"):format(UnitClassColoredName(u), tonumber(occurances) or 0) -- not sure how occurances is ever nil..
 			processedUnits = processedUnits:len() > 0 and ("%s, %s"):format(name, processedUnits) or name
 		end
-		self:PrintFunction(("UNIT_NAME_UPDATE: %s"):format(processedUnits), true)
+		self:FUNCTION(true, "UNIT_NAME_UPDATE: %s", processedUnits)
 	else
-		self:PrintFunction(("%s(%s)"):format(event, UnitClassColoredName(unit)), true)
+		self:FUNCTION(true, "%s(%s)", event, UnitClassColoredName(unit))
 		UnitNameUpdate(unit)
 	end
 end

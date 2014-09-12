@@ -49,12 +49,12 @@ local function IsOrIsNotString(data, has) -- logging helper
 end
 
 local function PrintTracking(key, guid, data, valid, has)
-	addon:PrintTracking(("%s[%s]%s: %s |c%s%s|r? %s"):format(
+	addon:TRACKING("%s[%s]%s: %s |c%s%s|r? %s",
 		INDENT, GUIDClassColoredName(guid), tostring(key),
 		IsOrIsNotString(data, has),
 		GUIDClassColorStr(guid), tostring(data),
 		tostring(valid)
-	))
+	)
 end
 
 -- spec
@@ -66,9 +66,9 @@ validateFilter[optionalKeys.SPEC] = function(data, guid)
 			for i = 1, #data do
 				local specData = data[i]
 				if specData < 0 then
-					valid = spec ~= -data
+					valid = spec ~= -specData
 				else
-					valid = spec == data
+					valid = spec == specData
 				end
 				--valid = IsValid(specData, GroupCache:Spec(guid) == specData)
 				
@@ -192,7 +192,7 @@ local itemsToCheckByGUID = {
 }
 
 local function CheckEquipmentChange(unit, item)
-	addon:PrintFunction(("CheckEquipmentChange(%s): %s"):format(tostring(unit), UnitClassColoredName(unit)))
+	addon:FUNCTION("CheckEquipmentChange(%s): %s", tostring(unit), UnitClassColoredName(unit))
 	
 	for i = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
 		--local item = GetInventoryItemID(unit, slot)
@@ -229,7 +229,7 @@ local function UnitInspectItems(unit)
 		end
 	else
 		local msg = "UnitInspectItems(\"%s\") - could not retreive 'guid' from 'unit'"
-		addon:Debug(msg:format(tostring(unit)))
+		addon:DEBUG(msg, tostring(unit))
 	end
 end
 
@@ -249,8 +249,8 @@ local OLD_ITEM_IMPL = function(data, guid)
 		UnitInspectItems(unit) -- tell the server we want some info
 		valid = false -- never passes here
 		
-		--addon:PrintTracking( ("   [%s] ITEM: wearing %s? %s"):format(GUIDClassColoredName(guid), tostring(buffName), tostring(valid)) )
-		addon:PrintTracking(("%s[%s]ITEM: |c%suhh|r"):format(INDENT, GUIDClassColoredName(guid), GUIDClassColorStr(guid)))
+		--addon:TRACKING("   [%s] ITEM: wearing %s? %s", GUIDClassColoredName(guid), tostring(buffName), tostring(valid))
+		addon:TRACKING("%s[%s]ITEM: |c%suhh|r", INDENT, GUIDClassColoredName(guid), GUIDClassColorStr(guid))
 	end
 	return valid
 end
@@ -332,7 +332,7 @@ function addon:TrackCooldownsFor(guid)
 
 		local classColorStr = GUIDClassColorStr(guid)
 		local classColoredName = GUIDClassColoredName(guid)
-		self:PrintFunction( (":TrackCooldownsFor(%s)"):format(classColoredName) )
+		self:FUNCTION(":TrackCooldownsFor(%s)", classColoredName)
 		
 		local class = select(2, GetPlayerInfoByGUID(guid))
 		if class then
@@ -342,7 +342,7 @@ function addon:TrackCooldownsFor(guid)
 					local spellname = GetSpellInfo(spellid)
 					local data = self:GetCooldownDataFor(class, spellid)
 					
-					self:PrintTracking( ("[%s] Testing data for |c%s%s|r(%s)"):format(classColoredName, classColorStr, tostring(spellname), tostring(spellid)) )
+					self:TRACKING("[%s] Testing data for |c%s%s|r(%s)", classColoredName, classColorStr, tostring(spellname), tostring(spellid))
 					-- check the required filters	
 					local meetsRequired = CheckFilters(data[FILTER_REQUIRED], guid)
 					if meetsRequired then
@@ -352,11 +352,11 @@ function addon:TrackCooldownsFor(guid)
 						cachedData[filterKeys.CHARGES] = data[filterKeys.CHARGES]
 						cachedData[filterKeys.BUFF_DURATION] = data[filterKeys.BUFF_DURATION]
 						
-						self:PrintTracking(("%s|c%s%s|r meets required!!!"):format(INDENT:rep(2), classColorStr, tostring(spellname)))
+						self:TRACKING("%s|c%s%s|r meets required!!!", INDENT:rep(2), classColorStr, tostring(spellname))
 						-- check the optional filters
 						local optionalFilters = data[FILTER_OPTIONAL]
 						if optionalFilters then
-							self:PrintTracking(("%schecking optional filters.."):format(INDENT:rep(2)))
+							self:TRACKING("%schecking optional filters..", INDENT:rep(2))
 							for modKey, modData in next, optionalFilters do
 								local applyMod = CheckFilters(modData[FILTER_REQUIRED], guid)
 								if applyMod then
@@ -365,15 +365,15 @@ function addon:TrackCooldownsFor(guid)
 									local modValue = modData[FILTER_MOD_VALUE]
 									local result = self:ApplyModification(modData[FILTER_MOD_OP], baseValue, modValue)
 									
-									self:PrintTracking(("%s|c%s%s|r applying modification on %s: %s -> \"%s\"%s -> %s"):format(
-										INDENT:rep(2), classColorStr, spellname, tostring(modKey), tostring(baseValue), tostring(modData[FILTER_MOD_OP]), tostring(modValue), tostring(result))
+									self:TRACKING("%s|c%s%s|r applying modification on %s: %s -> \"%s\"%s -> %s", 
+										INDENT:rep(2), classColorStr, spellname, tostring(modKey), tostring(baseValue), tostring(modData[FILTER_MOD_OP]), tostring(modValue), tostring(result)
 									)
 									if result then
 										-- cache the result of the applied modification
 										cachedData[modKey] = result
 									else
 										local msg = ":TrackCooldownsFor(guid): Failed to apply modification \"%s\" to %s (%s) for %s (no op for \"%s\")"
-										self:Debug(msg:format(modKey, spellid, tostring(spellname), classColoredName), tostring(modData[FILTER_MOD_OP]))
+										self:DEBUG(msg, modKey, spellid, tostring(spellname), classColoredName, tostring(modData[FILTER_MOD_OP]))
 									end
 								end
 							end

@@ -13,6 +13,7 @@ local optionalKeys = filterKeys[consts.FILTER_OPTIONAL]
 local Cooldowns = addon.Cooldowns
 local GroupCache = addon.GroupCache
 local GUIDClassColoredName = addon.GUIDClassColoredName
+local GetGUIDType = addon.GetGUIDType
 
 -- ------------------------------------------------------------------
 -- CLEU message registration
@@ -39,7 +40,7 @@ function addon:SubscribeCLEUEvent(message)
 	end
 	messageSubscribers._total = total
 	
-	self:PrintFunction((":|c%sSubscribeCLEUEvent|r(|cff999999%s|r): |cff00FF00%s|r (total=|cff00FF00%s|r)"):format(REGISTER_COLOR, message, tostring(messageSubscribers[message]), tostring(total)))
+	self:FUNCTION(":|c%sSubscribeCLEUEvent|r(|cff999999%s|r): |cff00FF00%s|r (total=|cff00FF00%s|r)", REGISTER_COLOR, message, tostring(messageSubscribers[message]), tostring(total))
 end
 
 function addon:UnsubscribeCLEUEvent(message)
@@ -51,7 +52,7 @@ function addon:UnsubscribeCLEUEvent(message)
 		if numSubs < 0 then
 			-- TODO: this check is unneeded, but may be helpful for debugging
 			local msg = ":UnsubscribeCLEUEvent(%s) - number of Unregister calls exceeded Register calls for given message (numSubs=|cffFF0000%d|r)"
-			self:Debug(msg:format(tostring(message), numSubs))
+			self:DEBUG(msg, tostring(message), numSubs)
 		elseif numSubs == 0 then
 			messageSubscribers[message] = nil
 		end
@@ -63,15 +64,15 @@ function addon:UnsubscribeCLEUEvent(message)
 		elseif total < 0 then
 			-- this could just mean we :UnregisterAll'd
 			local msg = ":UnsubscribeCLEUEvent(%s): total unsubs exceeds initial subs (total=|cffFF0000%s|r)"
-			self:Debug(msg:format(message, tostring(total)))
+			self:DEBUG(msg, message, tostring(total))
 		end
 		messageSubscribers._total = total
 		
-		self:PrintFunction((":|c%sUnsubscribeCLEUEvent|r(|cff999999%s|r): |cff00FF00%s|r (total=|cff00FF00%s|r)"):format(REGISTER_COLOR, message, tostring(messageSubscribers[message]), tostring(total)))
+		self:FUNCTION(":|c%sUnsubscribeCLEUEvent|r(|cff999999%s|r): |cff00FF00%s|r (total=|cff00FF00%s|r)", REGISTER_COLOR, message, tostring(messageSubscribers[message]), tostring(total))
 	else
 		-- this may mean :UnregisterAllCLEUMessages was called prior to this
 		local msg = ":UnsubscribeCLEUEvent(%s) - has no subs!!"
-		self:Debug(msg:format(tostring(message)))
+		self:DEBUG(msg, tostring(message))
 	end
 end
 
@@ -105,13 +106,13 @@ cleu["SPELL_CAST_SUCCESS"] = -- handle when tracked cds are cast
 			local cd = srcGUID and srcGUID:len() > 0 and Cooldowns[spellid][srcGUID]
 			if cd then
 				local msg = "%s casted %s (%s) on %s"
-				addon:PrintCLEU( msg:format(GUIDClassColoredName(srcGUID), tostring(spellid), tostring(spellname), GUIDClassColoredName(destGUID)) )
+				addon:CLEU(msg, GUIDClassColoredName(srcGUID), tostring(spellid), tostring(spellname), GUIDClassColoredName(destGUID))
 				cd:Use()
 			else
 				-- inspection data has not come back
 				-- ie, we are not tracking this spellid for this person yet
 				local msg = "MISSED TRACKING: %s casted %s (%s) on %s"
-				addon:PrintCLEU( msg:format(GUIDClassColoredName(srcGUID), tostring(spellid), tostring(spellname), GUIDClassColoredName(destGUID)) )
+				addon:CLEU(msg, GUIDClassColoredName(srcGUID), tostring(spellid), tostring(spellname), GUIDClassColoredName(destGUID))
 			end
 		end
 	end
@@ -134,7 +135,7 @@ cleu["SPELL_AURA_APPLIED"] = -- handle buffs gained
 				addon:TrackCooldownsFor(destGUID)
 				
 				local msg = "%s gained buff %s (%s)"
-				addon:PrintCLEU( msg:format(GUIDClassColoredName(destGUID), tostring(spellid), tostring(spellname)) )
+				addon:CLEU(msg, GUIDClassColoredName(destGUID), tostring(spellid), tostring(spellname))
 			end
 		end
 	end
@@ -146,12 +147,13 @@ cleu["SPELL_AURA_REMOVED"] = -- handle buffs lost
 				addon:TrackCooldownsFor(destGUID)
 				
 				local msg = "%s lost buff %s (%s)"
-				addon:PrintCLEU( msg:format(GUIDClassColoredName(destGUID), tostring(spellid), tostring(spellname)) )
+				addon:CLEU(msg, GUIDClassColoredName(destGUID), tostring(spellid), tostring(spellname))
 			end
 		end
 	end
 
-local PLAYER, PET = 0, 4 -- masked guid unit types
+local PLAYER = consts.GUID_TYPES.PLAYER
+local PET = consts.GUID_TYPES.PET
 local SpiritOfRedemption = GetSpellInfo(20711)
 local FeignDeath = GetSpellInfo(5384)
 cleu["UNIT_DIED"] = -- handle deaths
@@ -161,8 +163,8 @@ cleu["UNIT_DIED"] = -- handle deaths
 		-- http://wowpedia.org/API_UnitGUID
 		-- x % 8 has the same effect as x & 0x7 for x <= 0xf
 		-- this magic math masks the unit type out of the guid
-		local maskedUnitType = tonumber(destGUID:sub(5,5), 16) % 8
-		if maskedUnitType == PLAYER and destInGroup then
+		local unitType = GetGUIDType(destGUID)
+		if unitType == PLAYER and destInGroup then
 			local isSOR = UnitBuff(destName, SpiritOfRedemption)
 			local isFD = UnitBuff(destName, FeignDeath)
 			-- be extra super sure that the person died for real
@@ -192,8 +194,8 @@ cleu["UNIT_DIED"] = -- handle deaths
 			-- potential pet owner death - next pet they summon will have a new guid
 			GroupCache:SetPet(destGUID)
 			
-			addon:PrintCLEU( ("%s died"):format(GUIDClassColoredName(destGUID)) )
-		elseif maskedUnitType == PET then
+			addon:CLEU("%s died", GUIDClassColoredName(destGUID))
+		elseif unitType == PET then
 			-- a pet died - find its owner & see if we need to stop tracking anything
 			local ownerGUID = GroupCache:PetOwnerGUID(destGUID)
 			if ownerGUID then

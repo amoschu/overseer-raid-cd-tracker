@@ -96,11 +96,11 @@ local function DesaturateIfNoneCastable(icon, display, triggerSpell)
                         local dead = GroupCache:IsDead(guid) and "Dead" or ""
                         local offline = GroupCache:IsOffline(guid) and "Offline" or ""
                         local benched = GroupCache:IsBenched(guid) and "Benched" or ""
-                        addon:Debug(("->%s invalid: %s%s%s"):format(tostring(spell), dead, offline, benched))
+                        addon:DEBUG("->%s invalid: %s%s%s", tostring(spell), dead, offline, benched)
                     end
                     if spell:NumReady() == 0 then
                         local t = spell:TimeLeft()
-                        addon:Debug(("->%s none ready: (%dm %ds)"):format(tostring(spell), t / SEC_PER_MIN, t % SEC_PER_MIN))
+                        addon:DEBUG("->%s none ready: (%dm %ds)", tostring(spell), t / SEC_PER_MIN, t % SEC_PER_MIN)
                     end
                 end
                 
@@ -227,7 +227,7 @@ end
 Icons[MESSAGES.DISPLAY_CREATE] = function(self, msg, spellCD, display)
 	local db = addon.db:GetDisplaySettings(spellCD.spellid)
 	if db.icon.shown then
-		--addon:PrintFunction(("Icons:%s(%s)"):format(msg, tostring(spellCD)))
+		--addon:FUNCTION("Icons:%s(%s)", msg, tostring(spellCD))
 		
 		local icon = self[display]
 		if not icon then
@@ -269,7 +269,7 @@ end
 Icons[MESSAGES.DISPLAY_DELETE] = function(self, msg, spellCD, display)
 	local icon = self[display]
 	if icon then
-		--addon:PrintFunction(("Icons:%s(%s)"):format(msg, tostring(spellCD)))
+		--addon:FUNCTION("Icons:%s(%s)", msg, tostring(spellCD))
 		
 		icon:Hide()
 		StopCooldown(icon, spellCD, display)
@@ -327,7 +327,7 @@ local function StartCooldown(icon, spellCD)
 			icon.cd.expire = spellCD:ExpirationTime()
 			
 			if _DEBUG_COOLDOWN then
-				addon:Warn(("%s> Starting CD for %s.."):format(_DEBUG_ICON_PREFIX, tostring(spellCD)))
+				addon:WARN("%s> Starting CD for %s..", _DEBUG_ICON_PREFIX, tostring(spellCD))
 			end
 		end
 	end
@@ -350,7 +350,7 @@ Icons[MESSAGES.DISPLAY_BUFF_EXPIRE] = function(self, msg, spellCD, display)
 			local spell = addon:GetMostRecentBuffCastSpell(display)
 			
 			if _DEBUG_COOLDOWN then
-				addon:Print(("%s> %s -> closest = %s"):format(_DEBUG_ICON_PREFIX, msg, tostring(spell)))
+				addon:PRINT("%s> %s -> closest = %s", _DEBUG_ICON_PREFIX, msg, tostring(spell))
 			end
 			
 			if spell then
@@ -558,7 +558,7 @@ Icons[MESSAGES.OPT_DISPLAY_UPDATE] = function(self, msg, id)
         
         if not applied then
             local debugMsg = "Icons:%s: No such icon for id='%s'"
-            addon:Debug(debugMsg:format(msg, id))
+            addon:DEBUG(debugMsg, msg, id)
         end
     end
 end
@@ -596,7 +596,7 @@ Icons[MESSAGES.OPT_ICON_UPDATE] = function(self, msg, id) -- TODO: this only dif
         
         if not applied then
             local debugMsg = "Icons:%s: No such icon for id='%s'"
-            addon:Debug(debugMsg:format(msg, id))
+            addon:DEBUG(debugMsg, msg, id)
         end
     end
 end

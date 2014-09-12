@@ -355,7 +355,7 @@ end
 					-- offline = offline and GroupCache:IsOffline(spellGUID)
 					-- benched = benched and GroupCache:IsBenched(spellGUID)
 				-- end
-				--addon:Debug(("Display %s: all dead? %s, all offline? %s, all benched? %s"):format(GUIDClassColoredName(guid), tostring(dead), tostring(offline), tostring(benched)))
+				--addon:DEBUG("Display %s: all dead? %s, all offline? %s, all benched? %s", GUIDClassColoredName(guid), tostring(dead), tostring(offline), tostring(benched))
 				SetDisplayVisibility(spellCD, display, not (dead or offline or benched))
 			end
 		end
@@ -388,7 +388,7 @@ local function UpdateDisplay(msg, id)
         
         if not applied then
             local debugMsg = "UpdateDisplay(%s): No such display for id='%s'"
-            addon:Debug(debugMsg:format(msg, id))
+            addon:DEBUG(debugMsg, msg, id)
         end
     end
 end
@@ -411,7 +411,7 @@ end
 
 local Elements -- TODO: get rid of this class.. merge into Display
 function SpellDisplay:Initialize()
-	addon:PrintFunction("SpellDisplay:Initialize()")
+	addon:FUNCTION("SpellDisplay:Initialize()")
 	-- TODO: check if user has any displays shown (from db)
 	self:RegisterMessage(MESSAGES.CD_NEW, OnNew)
 	self:RegisterMessage(MESSAGES.CD_DELETE, OnDelete)
@@ -434,7 +434,7 @@ function SpellDisplay:Initialize()
 end
 
 function SpellDisplay:Shutdown()
-	addon:PrintFunction("SpellDisplay:Shutdown()")
+	addon:FUNCTION("SpellDisplay:Shutdown()")
 	if not Elements then
 		Elements = addon.DisplayElements
 	end

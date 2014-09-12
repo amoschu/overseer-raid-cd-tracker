@@ -12,7 +12,7 @@ local classes, specs = consts.classes, consts.specs
 local filterKeys, filterMods = consts.filterKeys, consts.filterMods
 local append = addon.TableAppend
 
-local MAX_NUM_TALENTS = MAX_NUM_TALENTS
+local MAX_NUM_TALENTS = MAX_TALENT_TIERS * NUM_TALENT_COLUMNS
 local MSEC_PER_SEC = consts.MSEC_PER_SEC
 local FILTER_REQUIRED = consts.FILTER_REQUIRED
 local FILTER_OPTIONAL = consts.FILTER_OPTIONAL
@@ -209,7 +209,7 @@ local function ValidateFilters(data)
 			end
 		else
 			local msg = "ValidateFilters(): no validation function defined for '%s'!"
-			addon:Debug(msg:format(key))
+			addon:DEBUG(msg, key)
 			break
 		end
 		
@@ -460,7 +460,7 @@ local function DebugUsageAddCooldown(spellid, cooldownData, modData) -- TODO: I 
 		optional = indent .. "<modData: type '" .. type(modData) .. "'>"
 	end
 	
-	addon:Debug(msg:format(tostring(GetSpellInfo(spellid)), tostring(spellid), data, FILTER_OPTIONAL, optional))
+	addon:DEBUG(msg, tostring(GetSpellInfo(spellid)), tostring(spellid), data, FILTER_OPTIONAL, optional)
 end
 
 -- master cooldown encoding function
@@ -478,7 +478,7 @@ local function AddCooldown(spellid, class, cooldownData, modData)
 			trackedClass[spellid] = trackedCD
 		else
 			local msg = "Duplicate cooldown data found for spellid=%d (%s) - overwriting"
-			addon:Warn( msg:format(spellid, (GetSpellInfo(spellid))) )
+			addon:WARN(msg, spellid, (GetSpellInfo(spellid)))
 			
 			wipe(trackedCD)
 		end
@@ -489,7 +489,7 @@ local function AddCooldown(spellid, class, cooldownData, modData)
 			-- we failed to get any cd duration info
 			-- TODO: return error? :SendMessage(CD_MISSING_DURATION_ERROR)?
 			local msg = "AddCooldown(): %s (%s) has no cooldown!"
-			addon:Critical(msg:format(tostring(spellid), tostring(GetSpellInfo(spellid))), 3)
+			addon:CRITICAL(msg, tostring(spellid), tostring(GetSpellInfo(spellid)), 3)
 		end
 		
 		-- store the cooldown charges data
@@ -620,7 +620,7 @@ local reqFilters = {}
 
 local function debugUsage(callFuncName, missingArgName)
 	local msg = ":%s() missing %s argument. Did you mean to use :AddCooldown() instead?"
-	addon:Debug(msg:format(callFuncName, missingArgName))
+	addon:DEBUG(msg, callFuncName, missingArgName)
 end
 
 local additionalFilters = {}
@@ -687,7 +687,7 @@ function addon:EncodeRequiredData(...)
 		end
 	else
 		local msg = ":EncodeRequiredData(...) - received an odd number of varargs, expected an even number of 'filter' & 'filterValue' pairs"
-		self:Debug(msg)
+		self:DEBUG(msg)
 	end
 	
 	return cdData
@@ -724,11 +724,11 @@ function addon:EncodeModificationData(value, op, filterKey, filterValue, ...)
 			end
 		else
 			local msg = ":EncodeModificationData(%s, %s, %s, %s, ...) - failed to encode additional filters (varargs is an odd number)"
-			self:Debug(msg:format(tostring(value), tostring(op), tostring(filterKey), tostring(filterValue)))
+			self:DEBUG(msg, tostring(value), tostring(op), tostring(filterKey), tostring(filterValue))
 		end
 	else
 		local msg = ":EncodeModificationData(%s, %s, filter, value, ...) - must specify at least one 'filter' & 'value' pair"
-		self:Debug(msg:format(tostring(value), tostring(op)))
+		self:DEBUG(msg, tostring(value), tostring(op))
 	end
 	
 	return modification

@@ -83,11 +83,11 @@ local ON_CONFIG_CHANGE = "ConfigTableChange"
 function options.DefaultsTable(uiType, uiName, app)
     local id = app:match("_%p+$") -- appname is assumed to have the form 'ADDON_MODULE_id'
     id = id and id:sub(2)
-    addon:Debug(("DefaultsTable(%s, %s, %s): id='%s'"):format(uiType, uiName, app, tostring(id)))
+    addon:DEBUG("DefaultsTable(%s, %s, %s): id='%s'", uiType, uiName, app, tostring(id))
     
     local db = addon.db:GetDefaultSettings()
     -- TODO: this is messing with the edit tab's saved status (maybe fixed when other selections are fleshed out?)
-    local opts = { -- TODO: every set here needs to set all existing saved data..
+    local opts = {
         type = "group",
         childGroups = "tab",
         width = "full",
@@ -304,7 +304,7 @@ function options.DefaultsTable(uiType, uiName, app)
                             local valid = input:len() == 0 or input:match(GROUP_ID) or input:match(CONSOLIDATED_ID) or _G[input]
                             if not valid then
                                 -- TODO: what about frames that have not been loaded yet?
-                                addon:Error(("Could not find a frame named '%s'"):format(input))
+                                addon:ERROR("Could not find a frame named '%s'", input)
                             end
                             return valid
                         end,

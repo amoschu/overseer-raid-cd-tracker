@@ -52,7 +52,7 @@ local function ElementTextBehaviorHandler(self, msg, child, onEnter, onLeave, on
 	for i = 1, #self do
 		local element = self[i]
 		if type(element) == "table" and type(element[msg]) == "function" then
-			addon:PrintFunction(("%s(enter=%s, leave=%s, down=%s, up=%s, wheel=%s)"):format(msg, tostring(onEnter), tostring(onLeave), tostring(onMouseDown), tostring(onMouseUp), tostring(onMouseWheel)))
+			addon:FUNCTION("%s(enter=%s, leave=%s, down=%s, up=%s, wheel=%s)", msg, tostring(onEnter), tostring(onLeave), tostring(onMouseDown), tostring(onMouseUp), tostring(onMouseWheel))
 			element[msg](element, msg, child, onEnter, onLeave, onMouseDown, onMouseUp, onMouseWheel)
 		end
 	end
@@ -135,7 +135,7 @@ function Elements:Unregister(element)
 end
 
 function Elements:Initialize()
-	addon:PrintFunction("Elements:Initialize()")
+	addon:FUNCTION("Elements:Initialize()")
 	
 	-- TODO? just register all messages in MESSAGES or maybe MESSAGES.DISPLAY
 	self:RegisterMessage(MESSAGES.DISPLAY_CREATE)
@@ -182,7 +182,7 @@ function Elements:Initialize()
 end
 
 function Elements:Shutdown()
-	addon:PrintFunction("Elements:Shutdown()")
+	addon:FUNCTION("Elements:Shutdown()")
 	
 	self:UnregisterMessage(MESSAGES.DISPLAY_CREATE)
 	self:UnregisterMessage(MESSAGES.DISPLAY_CD_LOST)

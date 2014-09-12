@@ -4,7 +4,8 @@ local addon = Overseer
 local SPELL_COLOR = "ff71D5FF"
 -- |cff71d5ff|Hspell:46584|h[Raise Dead]|h|r
 
-local function GetSpellLinkStr(spellid) -- TODO: TMP (move to Output.lua)
+local function GetSpellLinkStr(spellid)
+    -- TODO: check GetSpellInfo returns something (in case of invalid spellid)
 	return ("|cff71d5ff|Hspell:%s|h[%s]|h|r"):format(spellid, GetSpellInfo(spellid))
 end
 
@@ -12,7 +13,7 @@ local function PrintCooldownState(spellid, skipHeader)
 	local spellCooldowns = Cooldowns[spellid]
 	if spellCooldowns then
 		if not skipHeader then
-			addon:Print(("%s -------"):format(GetSpellLinkStr(spellid)), true)
+			addon:PRINT(true, "%s -------", GetSpellLinkStr(spellid))
 		end
 		for guid, spellCD in next, spellCooldowns do
 			local t = spellCD:TimeLeft()
@@ -39,7 +40,7 @@ local function PrintCooldownState(spellid, skipHeader)
 			end
 			
 			local output = "%s%s: %s%s"
-			addon:Print(output:format(INDENT, GUIDClassColoredName(guid), outputReady, outputTimeLeft), true)
+			addon:PRINT(true, output, INDENT, GUIDClassColoredName(guid), outputReady, outputTimeLeft)
 		end	
 	end
 end

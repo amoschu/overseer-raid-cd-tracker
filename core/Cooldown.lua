@@ -219,29 +219,29 @@ do -- debug (do block for folding)
 			if guidSpells then
 				local printedSomething
 				local classColor = GUIDClassColorStr(guid)
-				addon:Print(("Cooldowns [%s]:"):format(GUIDClassColoredName(guid)), true)
-				addon:Print(("Now: %s"):format(GetTime()), true)
+				addon:PRINT(true, "Cooldowns [%s]:", GUIDClassColoredName(guid))
+				addon:PRINT(true, "Now: %s", GetTime())
 				for spellid in next, guidSpells do
 					local cd = self[spellid][guid]
 					if cd then
-						addon:Print(("%s|c%s%s|r(%s) ->"):format(indent, classColor, GetSpellInfo(spellid), tostring(spellid)), true)
-						addon:Print(("%sready = %d"):format(indent:rep(2), cd:NumReady()), true)
-						addon:Print(("%scharges = %d"):format(indent:rep(2), cd:NumCharges()), true)
+						addon:PRINT(true, "%s|c%s%s|r(%s) ->", indent, classColor, GetSpellInfo(spellid), tostring(spellid))
+						addon:PRINT(true, "%sready = %d", indent:rep(2), cd:NumReady())
+						addon:PRINT(true, "%scharges = %d", indent:rep(2), cd:NumCharges())
 						local t = cd:TimeLeft()
-						addon:Print(("%sexpiration = %d (remaining = %dmin %dsec)"):format(
-							indent:rep(2), cd:ExpirationTime(), t / SEC_PER_MIN, t % SEC_PER_MIN), true)
+						addon:PRINT(true, "%sexpiration = %d (remaining = %dmin %dsec)",
+							indent:rep(2), cd:ExpirationTime(), t / SEC_PER_MIN, t % SEC_PER_MIN)
 						printedSomething = true
 					end
 				end
 				
 				if not printedSomething then
 					-- this should never happen
-					addon:Print(("%s%s"):format(indent, empty), true)
+					addon:PRINT(true, "%s%s", indent, empty)
 				end
 				printNumTracked = false
 			else
 				-- either we're not tracking anything for this person or the user passed bad input
-				addon:Print(("%sCould not retreive any tracked spells for '%s'. Is it a proper guid or unitId?"):format(indent, tostring(input)), true)
+				addon:PRINT(true, "%sCould not retreive any tracked spells for '%s'. Is it a proper guid or unitId?", indent, tostring(input))
 				--printNumTracked = true
 			end
 		end
@@ -249,7 +249,7 @@ do -- debug (do block for folding)
 		if printNumTracked then
 			-- list number of cds for all guids we are tracking
 			local printedSomething
-			addon:Print("#Cooldowns Per Person: ====", true)
+			addon:PRINT(true, "#Cooldowns Per Person: ====")
 			for guid, spells in next, CooldownsByGUID do
 				local numSpells = 0
 				-- iterate through all the spells and count how many there are..
@@ -257,12 +257,12 @@ do -- debug (do block for folding)
 				for _ in next, spells do
 					numSpells = numSpells + 1
 				end
-				addon:Print(("%s%s: %d"):format(indent, GUIDClassColoredName(guid), numSpells), true)
+				addon:PRINT(true, "%s%s: %d", indent, GUIDClassColoredName(guid), numSpells)
 				printedSomething = true
 			end
 			
 			if not printedSomething then
-				addon:Print(("%s%s"):format(indent, empty), true)
+				addon:PRINT(true, "%s%s", indent, empty)
 			end
 		end
 	end
@@ -313,7 +313,7 @@ local buffUseTimes = {
 
 local onCooldown = {
 	--[[
-	spells on cooldowns (for updating)
+	spells on cooldown (for updating)
 	
 	form:
 	[spellCD] = true,
@@ -331,9 +331,9 @@ local function CacheLatency(self)
 end
 
 function SpellCooldown:Initialize()
-	addon:PrintFunction("SpellCooldown:Initialize()")
+	addon:FUNCTION("SpellCooldown:Initialize()")
 	if not latencyTimer then
-		addon:PrintFunction(">> starting |cff999999latency cache|r timer")
+		addon:FUNCTION(">> starting |cff999999latency cache|r timer")
 		-- cache immediately
 		CacheLatency(self)
 		-- cache the client's world latency every time it updates
@@ -342,9 +342,9 @@ function SpellCooldown:Initialize()
 end
 
 function SpellCooldown:Shutdown()
-	addon:PrintFunction("SpellCooldown:Shutdown()")
+	addon:FUNCTION("SpellCooldown:Shutdown()")
 	if latencyTimer then
-		addon:PrintFunction(">> stopping |cff999999latency cache|r timer")
+		addon:FUNCTION(">> stopping |cff999999latency cache|r timer")
 		addon:CancelTimer(latencyTimer)
 	end
 	StopUpdateTimer()
@@ -386,17 +386,17 @@ local function OnFinish(spell)
 		-- this may mean we somehow used too many charges (from what? lag?)
 		-- thus firing too many 'OnFinished' callbacks
 		local msg = "OnFinish(): attempted to finish cd of %s(%s), but all charges were ready"
-		addon:Debug(msg:format(tostring(spell), tostring(spell.spellid)))
+		addon:DEBUG(msg, tostring(spell), tostring(spell.spellid))
 	end
 	
-	addon:PrintCD(("%s(%s) is ready!"):format(tostring(spell), tostring(spell.spellid)))
+	addon:COOLDOWN("%s(%s) is ready!", tostring(spell), tostring(spell.spellid))
 	addon:SendMessage(MESSAGES.CD_READY, spell)
 end
 
 local function BuffExpired(spell)
 	-- don't bother firing this if the person lost the cd (either left group or lost requirement)
 	if spell.guid and spell.spellid then
-		addon:PrintCD(("BuffExpired(%s): |c%s%s|r(%s)"):format(GUIDClassColoredName(spell.guid), GUIDClassColorStr(spell.guid), tostring(GetSpellInfo(spell.spellid)), tostring(spell.spellid)))
+		addon:COOLDOWN("BuffExpired(%s): |c%s%s|r(%s)", GUIDClassColoredName(spell.guid), GUIDClassColorStr(spell.guid), tostring(GetSpellInfo(spell.spellid)), tostring(spell.spellid))
 		addon:SendMessage(MESSAGES.CD_BUFF_EXPIRE, spell)
 		remove(spell.uses, 1) -- remove the cached use time after the broadcast in case anyone needs that information
 		
@@ -430,7 +430,7 @@ end
 local COOLDOWN_UPDATE_INTERVAL = 0.125 -- 8 fps
 --[[local]] function StartUpdateTimer()
 	if not updateTimer then
-		addon:PrintFunction(">> starting |cff999999CD update|r timer", true)
+		addon:FUNCTION(true, ">> starting |cff999999CD update|r timer")
 		-- TODO? switch to an OnUpdate script to ensure GetTime has changed?
 		updateTimer = addon:ScheduleRepeatingTimer(OnUpdate, COOLDOWN_UPDATE_INTERVAL)
 	end
@@ -438,7 +438,7 @@ end
 
 --[[local]] function StopUpdateTimer()
 	if updateTimer then
-		addon:PrintFunction(">> stopping |cff999999CD update|r timer", true)
+		addon:FUNCTION(true, ">> stopping |cff999999CD update|r timer")
 		addon:CancelTimer(updateTimer)
 		updateTimer = nil
 	end
@@ -476,12 +476,12 @@ function SpellCooldown:New(spellid, guid, cd, charges, buffDuration)
 	--]]
 	
 	-- note: cannot broadcast _NEW message just yet.. needs to be done up a level in Cooldowns (so that others can access data on it)
-	addon:PrintCD((":New(%s): +|c%s%s|r(%s)"):format(GUIDClassColoredName(guid), GUIDClassColorStr(guid), tostring(GetSpellInfo(spellid)), tostring(spellid)))
+	addon:COOLDOWN(":New(%s): +|c%s%s|r(%s)", GUIDClassColoredName(guid), GUIDClassColorStr(guid), tostring(GetSpellInfo(spellid)), tostring(spellid))
 	return instance
 end
 
 function SpellCooldown:Delete()
-	addon:PrintCD((":Delete(%s): -|c%s%s|r(%s)"):format(GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid)))
+	addon:COOLDOWN(":Delete(%s): -|c%s%s|r(%s)", GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid))
 	addon:SendMessage(MESSAGES.CD_DELETE, self)
 	
 	wipe(self.uses)
@@ -530,11 +530,11 @@ function SpellCooldown:Modify(spellid, guid, cd, charges, buffDuration)
 	if self.start ~= READY then
 		local t = self:TimeLeft()
 		local msg = "SpellCooldown:Modify(%s): |c%s%s|r(%s) was modified while still on cooldown!! (%dm %.1fs left)"
-		addon:Debug(msg:format(name, classColorStr, spellname, tostring(spellid), t / SEC_PER_MIN, t % SEC_PER_MIN))
+		addon:DEBUG(msg, name, classColorStr, spellname, tostring(spellid), t / SEC_PER_MIN, t % SEC_PER_MIN)
 		-- don't modify the cooldown if one is ticking down
 	end
 	
-	addon:PrintCD((":Modify(%s): |c%s%s|r(%s)"):format(name, classColorStr, spellname, tostring(spellid)))
+	addon:COOLDOWN(":Modify(%s): |c%s%s|r(%s)", name, classColorStr, spellname, tostring(spellid))
 	addon:SendMessage(MESSAGES.CD_MODIFIED, self)
 end
 
@@ -573,14 +573,14 @@ local function Use(spell, offset)
 		-- if so, don't bother with this if the buff duration has already expired
 		local useTime = GetCastTime(offset)
 		if GetCastTime() - useTime < buffDuration then
-			addon:Debug(("%s buff should expire in %d seconds.."):format(tostring(spell), buffDuration))
+			addon:DEBUG("%s buff should expire in %d seconds..", tostring(spell), buffDuration)
 			append(spell.uses, useTime)
 			buffUseTimes[spell] = true -- flag for updates
 		end
 	end
 
 	StartCooldown(spell, offset)
-	addon:PrintCD((":Use(%s): |c%s%s|r(%s)"):format(GUIDClassColoredName(spell.guid), GUIDClassColorStr(spell.guid), tostring(GetSpellInfo(spell.spellid)), tostring(spell.spellid)))
+	addon:COOLDOWN(":Use(%s): |c%s%s|r(%s)", GUIDClassColoredName(spell.guid), GUIDClassColorStr(spell.guid), tostring(GetSpellInfo(spell.spellid)), tostring(spell.spellid))
 	addon:SendMessage(MESSAGES.CD_USE, spell)
 end
 
@@ -594,7 +594,7 @@ function SpellCooldown:Use(offset, chargesOnCD)
 		-- this seems to happen when UNIT_SPELLCAST_SUCCEEDED fires randomly twice for the same spellcast
 		-- TODO: why does this happen?
 		local msg = "> %s was used within %.6f seconds of itself.. Surely an |cffFF0000error|r, right?" -- TODO: I think this will always be 0 since GetTime is cached..
-		addon:Debug(msg:format(tostring(self), timeSinceLastCast))
+		addon:DEBUG(msg, tostring(self), timeSinceLastCast)
 		return
 	end
 
@@ -615,7 +615,7 @@ function SpellCooldown:Use(offset, chargesOnCD)
 			if dead then state = "DEAD" end
 			if offline then state = state:len() > 0 and ("%s,OFFLINE"):format(state) or "OFFLINE" end
 			if benched then state = state:len() > 0 and ("%s,BENCHED"):format(state) or "BENCHED" end
-			addon:Debug(msg:format(state, name, GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid), name))
+			addon:DEBUG(msg, state, name, GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid), name)
 			-- failsafe for improper group cache state
 			-- ideally, the state would be set as the relevant events happen rather than waiting for a spellcast to do so..
 			GroupCache:SetState(self.guid)
@@ -631,7 +631,7 @@ function SpellCooldown:Use(offset, chargesOnCD)
 		-- ie, someone casted this spell but our state says it is still unusable
 		local t = self:TimeLeft()
 		local msg = ":Use(%s): |c%s%s|r(%s) was casted with none ready (first charge ready in %0.4fs)"
-		addon:PrintCD(msg:format(GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid), t))
+		addon:COOLDOWN(msg, GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid), t)
 		
 		KillCooldown(self)
 		addon:SendMessage(MESSAGES.CD_READY, self) -- this skips the normal _READY flow, so force a _READY broadcast
@@ -657,7 +657,7 @@ function SpellCooldown:Reset()
 		self.chargesOnCD = 0
 		addon:WipeSavedCooldownState(self.guid, self.spellid)
 		
-		addon:PrintCD((":Reset(%s): |c%s%s|r(%s)"):format(GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid)))
+		addon:COOLDOWN(":Reset(%s): |c%s%s|r(%s)", GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid))
 		addon:SendMessage(MESSAGES.CD_RESET, self)
 	end
 end

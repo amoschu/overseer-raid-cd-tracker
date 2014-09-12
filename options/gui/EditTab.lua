@@ -160,7 +160,7 @@ local function PopulateTree()
         if numChildren == 0 then
             -- this means there was no data for this consolidated id
             -- TODO: prune the id from the db?
-            addon:Debug(("PopulateTree(): consolidated id='%s' found no spells!"):format(consolidatedId))
+            addon:DEBUG("PopulateTree(): consolidated id='%s' found no spells!", consolidatedId)
         end
         -- don't throw the entry into the tree just yet - it may be part of a group
         -- second-pass, 'byConsolidatedId' holds consolidatedId = [consolidatedEntry table] pairs
@@ -207,7 +207,7 @@ local function PopulateTree()
             if childEntry then
                 groupEntry.children[pos] = childEntry
             else
-                addon:Debug(("PopulateTree(): group id='%s' missing entry for pos=%d!"):format(groupId, pos))
+                addon:DEBUG("PopulateTree(): group id='%s' missing entry for pos=%d!", groupId, pos)
             end
         end
         append(tree, groupEntry) -- TODO: subgroups
@@ -260,7 +260,7 @@ end
 -- spell selection
 DrawSelection["spell"] = function(id, container)
     local db = addon.db:GetSpellSettings(tonumber(id))
-    addon:Print(("%s is a spell!"):format(id))
+    addon:PRINT("%s is a spell!", id)
     
     if db.consolidated then
     else
@@ -274,18 +274,18 @@ end
 -- group selection
 DrawSelection["group"] = function(id, container)
     local db = addon.db:GetGroupOptions(id)
-    addon:Print(("%s is a group!"):format(id))
+    addon:PRINT("%s is a group!", id)
 end
 
 -- consolidated display selection
 DrawSelection["consolidated"] = function(id, container)
     local db = addon.db:GetConsolidatedSettings(id)
-    addon:Print(("%s is a merged display!"):format(id))
+    addon:PRINT("%s is a merged display!", id)
 end
 
 -- defaults selection
 DrawSelection["defaults"] = function(id, container)
-    addon:Print(("%s is the default settings!"):format(id))
+    addon:PRINT("%s is the default settings!", id)
     local appName = OPTIONS_APP_NAME:format(id)
     if not ACR:GetOptionsTable(appName) then
         ACR:RegisterOptionsTable(appName, options.DefaultsTable)
@@ -337,7 +337,7 @@ local function OnTreeSelect(container, event, group)
     
     if badId then
         -- a wild id appears!
-        addon:Debug(("'%s' tab encountered an unexpected id='%s'"):format(consts.tabs.EDIT, id))
+        addon:DEBUG("'%s' tab encountered an unexpected id='%s'", consts.tabs.EDIT, id)
     end
 end
 

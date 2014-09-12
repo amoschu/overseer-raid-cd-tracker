@@ -121,22 +121,20 @@ local function AcceptBrezFor(guid)
 		-- TODO: TMP
 		local difficulty = select(3, GetInstanceInfo()) or 0
 		if BROADCAST_BREZ[difficulty] then
-			SendChatMessage(("%s came back to life! (%d remaining)"):format(GUIDName(guid), brezCount), BROADCAST_TYPE)
-			if numUsed > 0 then
-				SendChatMessage(("%d resurrect%s used: %s"):format(numUsed, numUsed == 1 and "" or "s", broadcastSrc), BROADCAST_TYPE)
-			end
+			SendChatMessage(("%s came back to life! (%d used)"):format(GUIDName(guid), numUsed), BROADCAST_TYPE)
+            SendChatMessage(("%d resurrect%s remaining"):format(brezCount, brezCount == 1 and "" or "s"), BROADCAST_TYPE)
 		end
 		--
 		
-		addon:Print(("AcceptBrezFor(): %s came back to life! (%d remaining)"):format(GUIDClassColoredName(guid), brezCount))
-		addon:Print((rezSrcMsg):format(numUsed, rezSrc))
+		addon:PRINT("AcceptBrezFor(): %s came back to life! (%d remaining)", GUIDClassColoredName(guid), brezCount)
+		addon:PRINT(rezSrcMsg, numUsed, rezSrc)
 		if brezCount == 0 then
 			addon:SendMessage(MESSAGES.BREZ_OUT, brezCount)
 		end
 	else
 		local msg = "AcceptBrezFor(): %s revived - |cffFF0000brezCount is bad|r (%d remaining)"
-		addon:Debug(msg:format(GUIDClassColoredName(guid), brezCount))
-		addon:Debug(rezSrcMsg:format(numUsed, rezSrc))
+		addon:DEBUG(msg, GUIDClassColoredName(guid), brezCount)
+		addon:DEBUG(rezSrcMsg, numUsed, rezSrc)
 	end
 end
 
@@ -194,9 +192,9 @@ function addon:UNIT_HEALTH_FREQUENT(event, unit)
 						ankh:Use()
 					end
 					
-					self:Print(("%s ankh'd! maybe? possibly?"):format(GUIDClassColoredName(guid)))
+					self:PRINT("%s ankh'd! maybe? possibly?", GUIDClassColoredName(guid))
 				else
-					self:Debug(("|cffFF0000MISSED PENDING REZ|r: %s came back to life"):format(GUIDClassColoredName(guid)))
+					self:DEBUG("|cffFF0000MISSED PENDING REZ|r: %s came back to life", GUIDClassColoredName(guid))
 				end
 			end
 			GroupCache:SetState(guid)
@@ -207,7 +205,7 @@ function addon:UNIT_HEALTH_FREQUENT(event, unit)
 			
 			if deadCount < 0 then
 				local msg = "UNIT_HEALTH_FREQUENT(%s): miscounted number of dead = %d"
-				self:Debug(msg:format(UnitClassColoredName(unit), deadCount))
+				self:DEBUG(msg, UnitClassColoredName(unit), deadCount)
 			end
 		end
 	end
@@ -254,7 +252,7 @@ local function OutOfCombatResScan()
 			namesList = namesList:len() > 0 and ("%s, %s"):format(name, namesList) or name
 		end
 		local msg = "|cff00FFFFOutOfCombatResScan|r() - %d invalid GUIDs: %s"
-		addon:Debug(msg:format(#invalidGUIDs, namesList))
+		addon:DEBUG(msg, #invalidGUIDs, namesList)
 	end
 	if allAlive then
 		addon:HaltOoCResScan()
@@ -282,7 +280,7 @@ end
 
 function addon:CastBrezOn(destGUID, srcGUID, isPrecastSoulstone)
 	local msg = ":CastBrezOn(): %s -> %s (%s)"
-	self:PrintFunction(msg:format(GUIDClassColoredName(srcGUID), GUIDClassColoredName(destGUID), isPrecastSoulstone and "ss" or "not ss"), true)
+	self:FUNCTION(true, msg, GUIDClassColoredName(srcGUID), GUIDClassColoredName(destGUID), isPrecastSoulstone and "ss" or "not ss")
 	
 	if srcGUID then
 		rezzers[destGUID] = rezzers[destGUID] or {}
@@ -298,7 +296,7 @@ function addon:CastBrezOn(destGUID, srcGUID, isPrecastSoulstone)
 end
 
 function addon:ResetBrezCount()
-	self:PrintFunction(":ResetBrezCount()")
+	self:FUNCTION(":ResetBrezCount()")
 	brezCount = currentBrezMax
 	addon:SendMessage(MESSAGES.BREZ_RESET, brezCount)
 end
@@ -308,28 +306,28 @@ function addon:ValidateBrezCount()
 	currentBrezMax = BREZ_MAX[maxPlayers]
 	if not currentBrezMax then
 		local msg = ":ValidateBrezCount(): No max brez count set for instance size=%s, defaulting to infinite."
-		self:Debug(msg:format(tostring(maxPlayers)))
+		self:DEBUG(msg, tostring(maxPlayers))
 		
 		currentBrezMax = BREZ_MAX[0]
 	end
 	
 	brezCount = currentBrezMax
 	addon:SendMessage(MESSAGES.BREZ_RESET, brezCount)
-	self:PrintFunction((":ValidateBrezCount(%s): max=%d"):format(tostring(maxPlayers), tostring(currentBrezMax)))
+	self:FUNCTION(":ValidateBrezCount(%s): max=%d", tostring(maxPlayers), tostring(currentBrezMax))
 end
 
 local brezScanTimer
 local SCAN_INTERVAL = 0.5 -- if someone resurrects and dies within half a second..
 function addon:AddToDeadList(guid) -- the dead list is only used for brez
 	if self.isFightingBoss then
-		self:PrintFunction((":AddToDeadList(%s)"):format(GUIDClassColoredName(guid)), true)
+		self:FUNCTION(true, ":AddToDeadList(%s)", GUIDClassColoredName(guid))
 		if type(guid) == "string" and guid:len() > 0 and not dead[guid] then
 			dead[guid] = true
 			deadCount = deadCount + 1
 			
 			if not brezScanTimer then
 				-- first person dead
-				self:PrintFunction(">> starting |cffFFA500brez|r scan", true)
+				self:FUNCTION(true, ">> starting |cffFFA500brez|r scan")
 				self:RegisterEvent("UNIT_HEALTH_FREQUENT")
 				brezScanTimer = true
 				--brezScanTimer = self:ScheduleRepeatingTimer(BrezScan, SCAN_INTERVAL)
@@ -339,9 +337,9 @@ function addon:AddToDeadList(guid) -- the dead list is only used for brez
 end
 
 function addon:PauseBrezScan()
-	self:PrintFunction(":PauseBrezScan()")
+	self:FUNCTION(":PauseBrezScan()")
 	if brezScanTimer then
-		self:PrintFunction(">> stopping |cffFFA500brez|r scan", true)
+		self:FUNCTION(true, ">> stopping |cffFFA500brez|r scan")
 		self:UnregisterEvent("UNIT_HEALTH_FREQUENT")
 		--self:CancelTimer(brezScanTimer)
 		brezScanTimer = nil
@@ -353,7 +351,7 @@ end
 -- ------------------------------------------------------------------
 local Soulstone = GetSpellInfo(consts.SOULSTONE_ID)
 function addon:EnableBrezScan()
-	self:PrintFunction(":EnableBrezScan()")
+	self:FUNCTION(":EnableBrezScan()")
 
 	-- watch the CLEU events relevant to combat rezzes
 	self:SubscribeCLEUEvent("SPELL_AURA_APPLIED") -- soulstone buff
@@ -376,7 +374,7 @@ function addon:EnableBrezScan()
 end
 
 function addon:DisableBrezScan()
-	self:PrintFunction(":DisableBrezScan()")
+	self:FUNCTION(":DisableBrezScan()")
 	-- if we're disabling, we should no longer care about any state we were maintaining
 	ClearAllDeadAndPending()
 	self:PauseBrezScan()
@@ -389,17 +387,17 @@ end
 local resScanTimer
 local RES_SCAN_INTERVAL = 2.5
 function addon:StartOoCResScan()
-	self:PrintFunction(":StartOoCResScan()")
+	self:FUNCTION(":StartOoCResScan()")
 	if not resScanTimer then
-		self:PrintFunction(">> starting |cff00FFFFout-of-combat res|r scanner", true)
+		self:FUNCTION(true, ">> starting |cff00FFFFout-of-combat res|r scanner")
 		resScanTimer = self:ScheduleRepeatingTimer(OutOfCombatResScan, RES_SCAN_INTERVAL)
 	end
 end
 
 function addon:HaltOoCResScan()
-	self:PrintFunction(":HaltOoCResScan()")
+	self:FUNCTION(":HaltOoCResScan()")
 	if resScanTimer then
-		self:PrintFunction(">> stopping |cff00FFFFout-of-combat res|r scanner", true)
+		self:FUNCTION(true, ">> stopping |cff00FFFFout-of-combat res|r scanner")
 		self:CancelTimer(resScanTimer)
 		resScanTimer = nil
 	end

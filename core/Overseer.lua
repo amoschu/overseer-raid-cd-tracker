@@ -48,7 +48,7 @@ function addon:RegisterCustomEventOrWOWEvent(event)
 	if type(event) == "string" then
 		local prefix, suffix, interval = consts:DecodeEvent(event)
 		if prefix and suffix then
-			self:PrintFunction(("%s(%s) -> %s, %s, %s"):format(funcName, eventName, tostring(prefix), tostring(suffix), tostring(interval)))
+			self:FUNCTION("%s(%s) -> %s, %s, %s", funcName, eventName, tostring(prefix), tostring(suffix), tostring(interval))
 			-- one of our encoded filter events (see consts)
 			if prefix == EVENT_PREFIX_BUCKET then
 				buckets[suffix] = self:RegisterBucketEvent(suffix, interval or 1)
@@ -56,7 +56,7 @@ function addon:RegisterCustomEventOrWOWEvent(event)
 				self:SubscribeCLEUEvent(suffix)
 			else
 				local msg = "%s(%s) - Unexpected event or message"
-				self:Debug(msg:format(funcName, eventName))
+				self:DEBUG(msg, funcName, eventName)
 			end
 		else
 			-- wow event
@@ -64,7 +64,7 @@ function addon:RegisterCustomEventOrWOWEvent(event)
 		end
 	else
 		local msg = "%s(%s) - Expected string argument"
-		self:Debug(msg:format(funcName, eventName))
+		self:DEBUG(msg, funcName, eventName)
 	end
 end
 
@@ -75,7 +75,7 @@ function addon:UnregisterCustomEventOrWOWEvent(event)
 	if type(event) == "string" then
 		local prefix, suffix = consts:DecodeEvent(event)
 		if prefix and suffix then
-			self:PrintFunction(("%s(%s) -> %s, %s"):format(funcName, eventName, tostring(prefix), tostring(suffix)))
+			self:FUNCTION("%s(%s) -> %s, %s", funcName, eventName, tostring(prefix), tostring(suffix))
 			-- one of our encoded filter events (see consts)
 			if prefix == EVENT_PREFIX_BUCKET then
 				self:UnregisterBucket(buckets[suffix])
@@ -83,7 +83,7 @@ function addon:UnregisterCustomEventOrWOWEvent(event)
 				self:UnsubscribeCLEUEvent(suffix)
 			else
 				local msg = "%s(%s) - Unexpected event or message"
-				self:Debug(msg:format(funcName, eventName))
+				self:DEBUG(msg, funcName, eventName)
 			end
 		else
 			-- wow event
@@ -91,7 +91,7 @@ function addon:UnregisterCustomEventOrWOWEvent(event)
 		end
 	else
 		local msg = "%s(%s) - Expected string argument"
-		self:Debug(msg:format(funcName, eventName))
+		self:DEBUG(msg, funcName, eventName)
 	end
 end
 
@@ -109,14 +109,14 @@ local function HookRegistration(methodName)
 					-- does this create a new closure every time any hooked function is called?
 					-- or is it just once when we call hooksecurefunc?
 					-- ..this stuff should be negligible either way
-					addon:PrintFunction(registerMsg:format(methodName, tostring(event)))
+					addon:FUNCTION(registerMsg, methodName, tostring(event))
 				end)
 		end
 	end
 end
 
 function addon:OnInitialize()
-	self:PrintFunction(":OnInitialize")
+	self:FUNCTION(":OnInitialize")
 	
 	self:InitializeDefaultCooldowns()
 	self:InitializeDatabase()
@@ -160,24 +160,24 @@ local function Welcome()
 	if db.showWelcomeMessage then
 		local slash1 = SLASH_OVERSEER1
 		local slash2 = SLASH_OVERSEER2
-		addon:Print(("Type '%s' or '%s' for options. For help, type '%s h'."):format(slash1, slash2, slash1), true)
+		addon:PRINT(true, "Type '%s' or '%s' for options. For help, type '%s h'.", slash1, slash2, slash1)
 	end
 end
 
 local UnitAffectingCombat = UnitAffectingCombat -- TODO: TMP
 function addon:OnEnable()
-	self:PrintFunction(":OnEnable", true)
+	self:FUNCTION(true, ":OnEnable")
 	
 	-- TODO: TMP (trying to figure out best way to handle 'Script ran too long errors')
 	-- > if this does return true here on a fresh login then instead of doing the normal thing,
 	--	 :Register "PLAYER_REGEN_ENABLED" and boot up everything there
 	--	 ..what about client dc during boss fight? (the above sln would mean Overseer won't load when coming back from a dc..)
 	if UnitAffectingCombat("player") then
-		addon:Error("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
-		addon:Error("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
-		addon:Error(">> |cff00FF00the client is in combat|r <<")
-		addon:Error("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
-		addon:Error("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
+		addon:ERROR("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
+		addon:ERROR("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
+		addon:ERROR(">> |cff00FF00the client is in combat|r <<")
+		addon:ERROR("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
+		addon:ERROR("|cffFF0000HEY HEY HEY HEY HEY HEY HEY HEY")
 	end
 	--
 	
@@ -190,7 +190,7 @@ function addon:OnEnable()
 	self.playerGUID = UnitGUID("player")
 	if not self.playerGUID or self.playerGUID:len() <= 0 then
 		local msg = ":OnEnable() - failed to retreive player guid"
-		self:Debug(msg)
+		self:DEBUG(msg)
 	end
 	
 	-- intialization
@@ -234,7 +234,7 @@ end
 -- OnDisable
 -- ------------------------------------------------------------------
 function addon:OnDisable()
-	self:PrintFunction(":OnDisable")
+	self:FUNCTION(":OnDisable")
 	
 	-- reset back to initial state
 	

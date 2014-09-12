@@ -351,7 +351,7 @@ function Elements:RegisterMouse(widget, script, scriptCallback)
 					widget:SetScript(script, MouseHandler[script])
 				else
 					local msg = "Elements:RegisterMouse(%s): no handler for script '%s'"
-					addon:Debug(msg:format(tostring(script)))
+					addon:DEBUG(msg, tostring(script))
 				end
 			end
 			local callbacks = scriptCallbacksByWidget[script]
@@ -359,11 +359,11 @@ function Elements:RegisterMouse(widget, script, scriptCallback)
 			callbacks[widget][scriptCallback] = true
 		else
 			local msg = "Elements:RegisterMouse(%s) - 'scriptCallback' must be a function (type=%s)"
-			addon:Debug(msg:format(tostring(script), type(scriptCallback)))
+			addon:DEBUG(msg, tostring(script), type(scriptCallback))
 		end
 	else
 		local msg = "Elements:RegisterMouse(%s) - 'widget' cannot be registered for mouse scripts (type=%s)"
-		addon:Debug(msg:format(tostring(script), type(widget)))
+		addon:DEBUG(msg, tostring(script), type(widget))
 	end
 end
 
@@ -382,7 +382,7 @@ function Elements:UnregisterMouse(widget, script, scriptCallback)
 				widget:SetScript(script, nil)
 			else
 				local msg = "Elements:UnregisterMouse(%s): no handler for script '%s'"
-				addon:Debug(msg:format(tostring(script)))
+				addon:DEBUG(msg, tostring(script))
 			end
 			
 			local callbacks = scriptCallbacksByWidget[script]
@@ -395,7 +395,7 @@ function Elements:UnregisterMouse(widget, script, scriptCallback)
 		end
 	else
 		local msg = "Elements:UnregisterMouse(%s) - 'widget' cannot unregister mouse scripts (type=%s)"
-		addon:Debug(msg:format(tostring(script), type(widget)))
+		addon:DEBUG(msg, tostring(script), type(widget))
 	end
 end
 
@@ -415,6 +415,6 @@ function Elements:UnregisterAllMouse(widget)
 		widget:SetScript(ONMOUSEWHEEL, nil)
 	else
 		local msg = "Elements:UnregisterAllMouse() - 'widget' is not a valid mouse widget (type=%s)"
-		addon:Debug(msg:format(tostring(script), type(widget)))
+		addon:DEBUG(msg, tostring(script), type(widget))
 	end
 end

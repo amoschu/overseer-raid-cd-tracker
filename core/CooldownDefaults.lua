@@ -14,7 +14,7 @@ local optionalKeys = filterKeys[FILTER_OPTIONAL]
 -- Default cooldowns
 -- ------------------------------------------------------------------
 function addon:InitializeDefaultCooldowns()
-	self:PrintFunction(":InitializeDefaultCooldowns()")
+	self:FUNCTION(":InitializeDefaultCooldowns()")
 	
 -- TODO: TMP --> roll (has different id for chi torpedo and if talent 'celerity' is selected......)
 	addon:AddCooldown(109132, classes.monk, 20, 2, nil, -- roll (TODO: TMP) 

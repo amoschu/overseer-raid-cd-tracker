@@ -41,7 +41,7 @@ end
 
 local function OnSizeChanged(frame, width, height)
     -- TODO: save size
-    addon:Print(width..", "..height)
+    addon:PRINT("%s, %s", width, height)
 end
 
 local window
@@ -77,7 +77,7 @@ function options:OpenWindow()
                 local frame = widget.frame
                 local numPts = frame:GetNumPoints()
                 local pt, rel, relPt, x, y = frame:GetPoint()
-                addon:Print(("|cff00FF00%d|r: %s, %s, %s, %.1f, %.1f"):format(numPts, pt, tostring(rel), relPt, x, y))
+                addon:PRINT("|cff00FF00%d|r: %s, %s, %s, %.1f, %.1f", numPts, pt, tostring(rel), relPt, x, y)
                 -- TODO: save point(s)
                 frame:SetScript("OnSizeChanged", nil)
                 AG:Release(widget)
@@ -100,4 +100,4 @@ function options:OpenWindow()
     end
 end
 
-addon:ScheduleTimer(options.OpenWindow, 10, options) -- TODO: TMP
+--addon:ScheduleTimer(options.OpenWindow, 10, options) -- TODO: TMP

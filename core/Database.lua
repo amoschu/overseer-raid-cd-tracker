@@ -529,7 +529,7 @@ function db:LookupPosition(key)
 		return point, relFrame, relPoint, x, y
 	else
 		local msg = "db:LookupPosition(%s) - failed to retreive settings.."
-		addon:Debug(msg:format(tostring(key)))
+		addon:DEBUG(msg, tostring(key))
 		
 		return "CENTER", 0, 0
 	end
@@ -564,7 +564,7 @@ function db:SavePosition(key, frame)
 		settings.y = y
 	else
 		local msg = "db:SavePosition(%s) - failed to retreive settings table.."
-		addon:Debug(msg:format(tostring(key)))
+		addon:DEBUG(msg, tostring(key))
 	end
 	
 	-- TODO: this can fail..? (lookup position can spit out nils or possibly junk?)

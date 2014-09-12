@@ -263,7 +263,7 @@ end
 
 local movablesUnlocked -- TODO: differentiate between 'all' and 'any'
 function addon:UnlockAllMovables(objType)
-	addon:PrintFunction((":UnlockAllMovables(%s)"):format(tostring(objType)))
+	addon:FUNCTION(":UnlockAllMovables(%s)", tostring(objType))
 	
 	if objType then
 		UnlockMovables(Movables[objType])
@@ -276,7 +276,7 @@ function addon:UnlockAllMovables(objType)
 end
 
 function addon:LockAllMovables()
-	addon:PrintFunction(":LockAllMovables()")
+	addon:FUNCTION(":LockAllMovables()")
 	for objType, objs in next, Movables do
 		if type(objs) == "table" then
 			for movable in next, objs do
@@ -437,7 +437,7 @@ end
 			else
 				-- how?
 				local msg = "MovableObject:OnMoveMouseUp() - failed to save position of %s"
-				addon:Debug(msg:format(tostring(overlay.anchor))) -- this will probably not be a very useful debugging message
+				addon:DEBUG(msg, tostring(overlay.anchor)) -- this will probably not be a very useful debugging message
 			end
 		end
 	end

@@ -122,7 +122,7 @@ local function GetGUIDFromUnit(unit, funcName)
 	local guid = UnitGUID(unit)
 	if not guid or guid:len() <= 0 then
 		local msg = "InspectQueue:%s(unit) - could not retreive 'guid' from '%s'"
-		addon:Debug(msg:format(funcName, tostring(unit)))
+		addon:DEBUG(msg, funcName, tostring(unit))
 	end
 	return guid
 end
@@ -186,14 +186,14 @@ function InspectQueue:Push(unit, forceToTop)
 			self._retryLater[guid] = true
 			
 			local msg = "InspectQueue:Push(unit, %s): %s uninspectable"
-			addon:Print(msg:format(tostring(forceToTop), GUIDClassColoredName(guid)))
+			addon:PRINT(msg, tostring(forceToTop), GUIDClassColoredName(guid))
 		end
 	else
 		-- npc?
 		-- this should never happen
 		local reaction = UnitReaction(unit, "player")
-		addon:Debug( ("InspectQueue:Push(%s): uninspectable, isplayer? %s, reaction=%s - |cffFF0000SOMETHING IS FUCKED|r"):format(
-			GUIDClassColoredName(guid), tostring(UnitIsPlayer(unit) and true or false), tostring(reaction))
+		addon:DEBUG("InspectQueue:Push(%s): uninspectable, isplayer? %s, reaction=%s - |cffFF0000SOMETHING IS FUCKED|r", 
+			GUIDClassColoredName(guid), tostring(UnitIsPlayer(unit) and true or false), tostring(reaction)
 		)
 	end
 	return result
@@ -313,7 +313,7 @@ function InspectQueue:Query()
 			if not UnitIsInspectable(unit) then
 				-- person is not inspectable, push them into the uninspectable list
 				local msg = "|c%sInspectQueue|r:Query(): %s uninspectable"
-				addon:Print(msg:format(INSPECT_COLOR, GUIDClassColoredName(guid)))
+				addon:PRINT(msg, INSPECT_COLOR, GUIDClassColoredName(guid))
 				
 				self:Remove(guid)
 				self._retryLater[guid] = true
@@ -336,7 +336,7 @@ function InspectQueue:Query()
 		queriedGUID = guid
 		
 		local msg = "|c%sInspectQueue|r:Query(): querying %s (attempt #%d)"
-		addon:Print(msg:format(INSPECT_COLOR, GUIDClassColoredName(guid), GetNumAttempts(guid) or 1))
+		addon:PRINT(msg, INSPECT_COLOR, GUIDClassColoredName(guid), GetNumAttempts(guid) or 1)
 		result = true
 	end
 	
@@ -362,43 +362,43 @@ do
 	local indent = consts.INDENT
 	local empty = consts.EMPTY
 	function InspectQueue:Debug()
-		addon:Print(("|c%sInspect|r 1st: ==============="):format(INSPECT_COLOR), true)
+		addon:PRINT(true, "|c%sInspect|r 1st: ===============", INSPECT_COLOR)
 		if #self._oneShotQueue == 0 then
-			addon:Print(("%s%s"):format(indent, empty), true)
+			addon:PRINT(true, "%s%s", indent, empty)
 		else
 			for i = 1, #self._oneShotQueue do -- one-shot queue
 				local guid = self._oneShotQueue[i]
-				addon:Print(("%s%d: %s"):format(indent, i, GUIDClassColoredName(guid)), true)
+				addon:PRINT(true, "%s%d: %s", indent, i, GUIDClassColoredName(guid))
 			end
 		end
-		addon:Print(("|c%sInspect|r Queue: ============"):format(INSPECT_COLOR), true)
+		addon:PRINT(true, "|c%sInspect|r Queue: ============", INSPECT_COLOR)
 		if #self._queue == 0 then
-			addon:Print(("%s%s"):format(indent, empty), true)
+			addon:PRINT(true, "%s%s", indent, empty)
 		else
 			for i = 1, #self._queue do -- main queue
 				local guid = self._queue[i]
 				local attempts = self._attemptsByGUID[guid]
-				addon:Print(("%s%d: %s (%s)"):format(indent, i, GUIDClassColoredName(guid), tostring(attempts)), true)
+				addon:PRINT(true, "%s%d: %s (%s)", indent, i, GUIDClassColoredName(guid), tostring(attempts))
 			end
 		end
-		addon:Print(("|c%sInspect|r Stale: ============"):format(INSPECT_COLOR), true)
+		addon:PRINT(true, "|c%sInspect|r Stale: ============", INSPECT_COLOR)
 		if #self._staleQueue == 0 then
-			addon:Print(("%s%s"):format(indent, empty), true)
+			addon:PRINT(true, "%s%s", indent, empty)
 		else
 			for i = 1, #self._staleQueue do -- stale queue
 				local guid = self._staleQueue[i]
 				local attempts = self._staleAttempts[guid]
-				addon:Print(("%s%d: %s (%s)"):format(indent, i, GUIDClassColoredName(guid), tostring(attempts)), true)
+				addon:PRINT(true, "%s%d: %s (%s)", indent, i, GUIDClassColoredName(guid), tostring(attempts))
 			end
 		end
-		addon:Print(("|c%sInspects|r Retrying later: ====="):format(INSPECT_COLOR), true)
+		addon:PRINT(true, "|c%sInspects|r Retrying later: =====", INSPECT_COLOR)
 		local isEmpty = true
 		for guid in next, self._retryLater do -- flagged for retry (uninspectable, missing talents/glyphs)
 			isEmpty = false
-			addon:Print(("%s%s"):format(indent, GUIDClassColoredName(guid)), true)
+			addon:PRINT(true, "%s%s", indent, GUIDClassColoredName(guid))
 		end
 		if isEmpty then
-			addon:Print(("%s%s"):format(indent, empty), true)
+			addon:PRINT(true, "%s%s", indent, empty)
 		end
 	end
 
@@ -420,11 +420,11 @@ local function IsTimedOut() -- TODO: LFR/X-realm may need a longer timeout
 end
 
 function StartInspects()
-	addon:PrintFunction("StartInspects()")
+	addon:FUNCTION("StartInspects()")
 	-- shouldn't need to re-register, but I don't think registering multiple times matters
 	
 	if not (InspectQueue:IsEmpty() or InspectTimer) then
-		addon:PrintFunction((">> starting |c%sinspect|r timer"):format(INSPECT_COLOR), true)
+		addon:FUNCTION(true, ">> starting |c%sinspect|r timer", INSPECT_COLOR)
 		
 		addon:RegisterEvent("INSPECT_READY")
 		QueryNextInspect() -- fire immediately
@@ -435,16 +435,16 @@ function StartInspects()
 		addon:CancelTimer(InspectTimer)
 		addon:RegisterEvent("INSPECT_READY")
 		
-		addon:PrintFunction((">> restarting |c%sinspect|r timer (it was invalidated somehow..)"):format(INSPECT_COLOR), true)
+		addon:FUNCTION(true, ">> restarting |c%sinspect|r timer (it was invalidated somehow..)", INSPECT_COLOR)
 		QueryNextInspect()
 		InspectTimer = addon:ScheduleRepeatingTimer(QueryNextInspect, INSPECT_DELAY)
 	end
 end
 
 function StopInspects()
-	addon:PrintFunction("StopInspects()")
+	addon:FUNCTION("StopInspects()")
 	if InspectTimer then
-		addon:PrintFunction((">> stopping |c%sinspect|r timer"):format(INSPECT_COLOR))
+		addon:FUNCTION(">> stopping |c%sinspect|r timer", INSPECT_COLOR)
 		addon:CancelTimer(InspectTimer)
 		InspectTimer = nil
 		
@@ -509,7 +509,7 @@ local function HasAllTalentsForLevel(guid)
 			-- blizzard either changed the way this constant is structured
 			-- ..or the way talents work has changed completely (again)
 			local msg = "Expected CLASS_TALENT_LEVELS[%s] to contain at least 1 element! (it has %d elements)"
-			addon:Error(msg:format(class, #classTalentLevels))
+			addon:ERROR(msg, class, #classTalentLevels)
 		end
 		for i = #classTalentLevels, 1, -1 do -- assumption: the CLASS_TALENT_LEVELS table is ordered from lowest -> highest level
 			-- figure out the max talent tier this person can have
@@ -544,10 +544,10 @@ local function HasAllMajorGlyphsForLevel(guid)
 end
 
 function addon:INSPECT_READY(event, guid)
-	self:PrintFunction(("|c%sINSPECT_READY|r(%s): queried=%s"):format(
+	self:FUNCTION("|c%sINSPECT_READY|r(%s): queried=%s", 
 		INSPECT_COLOR,
 		type(guid) == "string" and GUIDClassColoredName(guid) or tostring(guid),
-		queriedGUID and GUIDClassColoredName(queriedGUID) or "<|cff999999none|r>")
+		queriedGUID and GUIDClassColoredName(queriedGUID) or "<|cff999999none|r>"
 	)
 	
 	-- if the queue is empty, 
@@ -571,7 +571,7 @@ function addon:INSPECT_READY(event, guid)
 					local missing = not hasAllTalents and "talents" or ""
 					missing = not hasAllMajorGlyphs and (missing.."/glyphs") or missing
 					local msg = "|c%sINSPECT_READY|r: %s is missing some %s!! Retrying later!"
-					self:Print(msg:format(INSPECT_COLOR, GUIDClassColoredName(guid), missing))
+					self:PRINT(msg, INSPECT_COLOR, GUIDClassColoredName(guid), missing)
 					-- TODO: this will constantly retry people who purposefully have a glyph slot empty or a talent tier unselected
 					-- (eg, unselecting a CC tier for a raid encounter with mind controls)
 					InspectQueue._retryLater[guid] = true
@@ -582,7 +582,7 @@ function addon:INSPECT_READY(event, guid)
 				-- we were unable to cache everything we wanted
 				-- this could indicate a problem with some constant
 				local msg = "|c%sINSPECT_READY|r: some information not yet available for %s!!"
-				self:Print(msg:format(INSPECT_COLOR, GUIDClassColoredName(guid)))
+				self:PRINT(msg, INSPECT_COLOR, GUIDClassColoredName(guid))
 			end
 		end
 	end

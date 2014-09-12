@@ -87,10 +87,10 @@ local function SpitSavedState(t, depth)
 	for k,v in next, t do
 		if type(v) == "table" then
 			local key = IsGUIDPlayer(k) and GUIDClassColoredName(k) or (GetSpellInfo(k) or k)
-			addon:Print(("%s|cffFF00FF>|r%s:"):format(indent, tostring(key)), true)
+			addon:PRINT(true, "%s|cffFF00FF>|r%s:", indent, tostring(key))
 			SpitSavedState(v, depth + 1)
 		else
-			addon:Print(("%s%s=%s"):format(indent, tostring(k), tostring(v)), true)
+			addon:PRINT(true, "%s%s=%s", indent, tostring(k), tostring(v))
 		end
 	end
 end
@@ -98,7 +98,7 @@ end
 function addon:DebugSavedState()
 	SavedState = SavedState or OverseerSavedState
 	if SavedState then
-		self:Print("OverseerSavedState =======", true)
+		self:PRINT(true, "OverseerSavedState =======")
 		SpitSavedState(SavedState)
 	end
 end
@@ -121,7 +121,7 @@ local function Load(self, elapsed)
 			local chargesOnCD = cdInfo[CHARGES_ON_CD]
 			local start = cdInfo[START_TIME]
 					
-			addon:Print(("%s%s->'%s' (cd=%s, charges=%s, buff=%s, chargesOnCD=%s, start=%s)"):format(INDENT, GUIDClassColoredName(guid), GetSpellInfo(spellid), cd, charges, tostring(buffDuration), chargesOnCD, start))
+			addon:PRINT("%s%s->'%s' (cd=%s, charges=%s, buff=%s, chargesOnCD=%s, start=%s)", INDENT, GUIDClassColoredName(guid), GetSpellInfo(spellid), cd, charges, tostring(buffDuration), chargesOnCD, start)
 			
 			local elapsed = time() - start
 			-- check if any charges finished their cooldowns between sessions
@@ -143,12 +143,11 @@ local function Load(self, elapsed)
 				if unit and (UnitInRaid(unit) or UnitInParty(unit) or UnitIsUnit(unit, "player")) then
 					-- only add if the cooldown is applicable
 					local spellCD = Cooldowns:Add(spellid, guid, cd, charges, buffDuration)
-					addon:PrintCD(("(%s):Use() elapsed=%s, chargesOnCD=%s"):format(tostring(spellCD), elapsed, chargesOnCD))
+					addon:COOLDOWN("(%s):Use() elapsed=%s, chargesOnCD=%s", tostring(spellCD), elapsed, chargesOnCD)
 					spellCD:Use(elapsed, chargesOnCD)
 				end
 			else
 				-- all charges finished since the previous session
-				print(" !!!! "..GUIDClassColoredName(guid).."'s "..tostring(GetSpellInfo(spellid))..": all charges finished from previous saved state -> clearing") -- TODO: DELETE
 				addon:WipeSavedCooldownState(guid, spellid)
 			end
 			
@@ -173,7 +172,7 @@ local function Load(self, elapsed)
 end
 
 function addon:LoadSavedState()
-	self:PrintFunction(":LoadSavedState()")
+	self:FUNCTION(":LoadSavedState()")
 	
 	SavedState = OverseerSavedState
 	if SavedState then
@@ -187,7 +186,7 @@ function addon:LoadSavedState()
 			end
 		else
 			local msg = ":LoadSavedState(): Failed! Cooldowns structure missing!"
-			self:Debug(msg)
+			self:DEBUG(msg)
 		end
 	end
 end
@@ -196,7 +195,7 @@ end
 -- Save state information
 -- ------------------------------------------------------------------
 function addon:WipeSavedCooldownState(guid, spellid)
-	self:PrintFunction((":WipeSavedCooldownState(%s): %s"):format(GUIDClassColoredName(guid), GetSpellInfo(spellid)))
+	self:FUNCTION(":WipeSavedCooldownState(%s): %s", GUIDClassColoredName(guid), GetSpellInfo(spellid))
 	
 	SavedState = SavedState or OverseerSavedState
 	if SavedState and SavedState[guid] and SavedState[guid][spellid] then
@@ -207,7 +206,7 @@ function addon:WipeSavedCooldownState(guid, spellid)
 end
 
 function addon:SaveCooldownState(spellCD, start)
-	self:PrintFunction((":SaveCooldownState(%s): cd=%s, charges=%s, buff=%s, chargesOnCD=%s, start=%s"):format(tostring(spellCD), spellCD.duration, spellCD.charges, tostring(spellCD.buffDuration), spellCD.chargesOnCD, tostring(start)))
+	self:FUNCTION(":SaveCooldownState(%s): cd=%s, charges=%s, buff=%s, chargesOnCD=%s, start=%s", tostring(spellCD), spellCD.duration, spellCD.charges, tostring(spellCD.buffDuration), spellCD.chargesOnCD, tostring(start))
 	
 	SavedState = SavedState or OverseerSavedState
 	-- save the cooldown's state in case of reloads or disconnects

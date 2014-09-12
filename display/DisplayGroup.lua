@@ -57,7 +57,7 @@ local function FindChildRelativePosition(parent, child)
 	if not position then
 		-- somehow not in the .byPosition array ?
 		local msg = "FindChildRelativePosition(%s) - child |cffFF0000NOT FOUND|r!!"
-		addon:Debug(msg:format(tostring(child)))
+		addon:DEBUG(msg, tostring(child))
 	end
 	return position
 end
@@ -98,7 +98,7 @@ Dynamics[GROUP_TYPES.SIDE] = function(child, parent, settings, add) -- this is a
 	
 	if _DEBUG_GROUPS then
 		local absPos = parent.children.byChild[child]
-		addon:Debug(("%s> |cff%s%s|r: abs=|cffFF00FF%d|r, pos=[|cffFF00FF%d|r]"):format(_DEBUG_GROUPS_PREFIX, _DEBUG_GROUPS_TYPE_COLOR, GROUP_TYPES.SIDE, absPos, position))
+		addon:DEBUG("%s> |cff%s%s|r: abs=|cffFF00FF%d|r, pos=[|cffFF00FF%d|r]", _DEBUG_GROUPS_PREFIX, _DEBUG_GROUPS_TYPE_COLOR, GROUP_TYPES.SIDE, absPos, position)
 	end
 	
 	if add then
@@ -130,7 +130,7 @@ Dynamics[GROUP_TYPES.SIDE] = function(child, parent, settings, add) -- this is a
 		child:SetPoint(pt, parent, pt, x, y)
 		
 		if _DEBUG_GROUPS then
-			addon:Print(("%s> child:SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)"):format(_DEBUG_GROUPS_PREFIX, pt, round(x), round(y)))
+			addon:PRINT("%s> child:SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)", _DEBUG_GROUPS_PREFIX, pt, round(x), round(y))
 		end
 	end
 	
@@ -157,7 +157,7 @@ Dynamics[GROUP_TYPES.SIDE] = function(child, parent, settings, add) -- this is a
 		sibling:SetPoint(pt, parent, relPt, x + shiftX, y + shiftY)
 		
 		if _DEBUG_GROUPS then
-			addon:Print(("%s> =>sibling[|cffFF00FF%d|r]:SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)"):format(_DEBUG_GROUPS_PREFIX, i, pt, round(x), round(y)))
+			addon:PRINT("%s> =>sibling[|cffFF00FF%d|r]:SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)", _DEBUG_GROUPS_PREFIX, i, pt, round(x), round(y))
 		end
 	end
 end
@@ -216,7 +216,7 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 	
 	if _DEBUG_GROUPS then
 		local absPos = parent.children.byChild[child]
-		addon:Debug(("%s> |cff%s%s|r[%d, %d]: abs=|cffFF00FF%d|r, pos=[|cffFF00FF%d|r]"):format(_DEBUG_GROUPS_PREFIX, _DEBUG_GROUPS_TYPE_COLOR, GROUP_TYPES.GRID, rows, cols, absPos, position))
+		addon:DEBUG("%s> |cff%s%s|r[%d, %d]: abs=|cffFF00FF%d|r, pos=[|cffFF00FF%d|r]", _DEBUG_GROUPS_PREFIX, _DEBUG_GROUPS_TYPE_COLOR, GROUP_TYPES.GRID, rows, cols, absPos, position)
 	end
 	
 	if add then
@@ -236,7 +236,7 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 		end
 		
 		if _DEBUG_GROUPS then
-			addon:Print(("%s> [|cffFF00FF%d|r] @ row=|cff00FF00%d|r, col=|cff00FF00%d|r"):format(_DEBUG_GROUPS_PREFIX, position, curRow, curCol))
+			addon:PRINT("%s> [|cffFF00FF%d|r] @ row=|cff00FF00%d|r, col=|cff00FF00%d|r", _DEBUG_GROUPS_PREFIX, position, curRow, curCol)
 		end
 	
 		-- position the child
@@ -254,7 +254,7 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 		child:SetPoint(pt, parent, pt, x, y)
 		
 		if _DEBUG_GROUPS then
-			addon:Print(("%s> child:SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)"):format(_DEBUG_GROUPS_PREFIX, pt, round(x), round(y)))
+			addon:PRINT("%s> child:SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)", _DEBUG_GROUPS_PREFIX, pt, round(x), round(y))
 		end
 	end
 	
@@ -318,10 +318,10 @@ Dynamics[GROUP_TYPES.GRID] = function(child, parent, settings, add)
 		
 		if _DEBUG_GROUPS then
 			local coloredIdx = ("|cffFF00FF%d|r"):format(i)
-			addon:Print(("%s> =>sibling[%s]: curRow=|cff00FF00%d|r, curCol=|cff00FF00%d|r"):format(_DEBUG_GROUPS_PREFIX, coloredIdx, curRow, curCol))
-			addon:Print(("%s> =>sibling[%s]: oldRow=|cff00FF00%d|r, oldCol=|cff00FF00%d|r"):format(_DEBUG_GROUPS_PREFIX, coloredIdx, oldRow, oldCol))
-			addon:Print(("%s> =>sibling[%s]: diffRow=|cff00FF00%d|r, diffCol=|cff00FF00%d|r"):format(_DEBUG_GROUPS_PREFIX, coloredIdx, diffRow, diffCol))
-			addon:Print(("%s> sibling[%s] :SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)"):format(_DEBUG_GROUPS_PREFIX, coloredIdx, pt, round(xOff), round(yOff)))
+			addon:PRINT("%s> =>sibling[%s]: curRow=|cff00FF00%d|r, curCol=|cff00FF00%d|r", _DEBUG_GROUPS_PREFIX, coloredIdx, curRow, curCol)
+			addon:PRINT("%s> =>sibling[%s]: oldRow=|cff00FF00%d|r, oldCol=|cff00FF00%d|r", _DEBUG_GROUPS_PREFIX, coloredIdx, oldRow, oldCol)
+			addon:PRINT("%s> =>sibling[%s]: diffRow=|cff00FF00%d|r, diffCol=|cff00FF00%d|r", _DEBUG_GROUPS_PREFIX, coloredIdx, diffRow, diffCol)
+			addon:PRINT("%s> sibling[%s] :SetPoint(%s, |cff00FF00%s|r, |cff00FF00%s|r)", _DEBUG_GROUPS_PREFIX, coloredIdx, pt, round(xOff), round(yOff))
 		end
 	end
 end
@@ -339,7 +339,7 @@ Dynamics[GROUP_TYPES.RADIAL] = function(child, parent, settings, add)
 	
 	if _DEBUG_GROUPS then
 		local absPos = parent.children.byChild[child]
-		addon:Debug(("%s> |cff%s%s|r[r=%d, %.1f, %.1f]: abs=|cffFF00FF%d|r, pos=[|cffFF00FF%d|r]"):format(_DEBUG_GROUPS_PREFIX, _DEBUG_GROUPS_TYPE_COLOR, GROUP_TYPES.RADIAL, radius, startAngle, endAngle, absPos, position))
+		addon:DEBUG("%s> |cff%s%s|r[r=%d, %.1f, %.1f]: abs=|cffFF00FF%d|r, pos=[|cffFF00FF%d|r]", _DEBUG_GROUPS_PREFIX, _DEBUG_GROUPS_TYPE_COLOR, GROUP_TYPES.RADIAL, radius, startAngle, endAngle, absPos, position)
 	end
 
 	-- position this child
@@ -365,12 +365,12 @@ local function HandleDynamicSettings(child, parent, groupOptions, add)
 			if parentPt ~= pt then
 				-- set the parent's point so that adding/removing children does not alter position
 				parent:ClearAllPoints()
-				addon:Print(("%s -> :SetPoint(%s, %s, %s, %.1f, %.1f)"):format(parent.groupId, pt, tostring(rel), relPt, parentX, parentY))
+				addon:PRINT("%s -> :SetPoint(%s, %s, %s, %.1f, %.1f)", parent.groupId, pt, tostring(rel), relPt, parentX, parentY)
 				parent:SetPoint(pt, rel, relPt, parentX, parentY)
 			end
 		else
 			local msg = "HandleDynamicSettings() - |cffFF0000missing|r handler for type '%s'"
-			addon:Debug(msg:format(tostring(dynamic.type)))
+			addon:DEBUG(msg, tostring(dynamic.type))
 		end
 	end
 end
@@ -486,7 +486,7 @@ local function ResizeParent(parent)
 	parent:SetSize(width, height)
 
 	if _DEBUG_GROUPS then
-		addon:Debug(("%s> parent:SetSize(|cff00FF00%.1f|r, |cff00FF00%.1f|r)"):format(_DEBUG_GROUPS_PREFIX, width, height))
+		addon:DEBUG("%s> parent:SetSize(|cff00FF00%.1f|r, |cff00FF00%.1f|r)", _DEBUG_GROUPS_PREFIX, width, height)
 	end
 end
 
@@ -537,7 +537,7 @@ end
 local function SpawnGroups(childId, child, visited)
     visited = visited or {}
     if AlreadyVisited(visited, childId) then
-        addon:Debug(("SpawnGroups(%s): Cyclic reference detected! (%s)"):format(childId, concat(visited, "->")))
+        addon:DEBUG("SpawnGroups(%s): Cyclic reference detected! (%s)", childId, concat(visited, "->"))
         return
     end
     append(visited, childId)
@@ -557,16 +557,16 @@ local function SpawnGroups(childId, child, visited)
 					-- -- I'm pretty sure this is not an error
 					-- -- can (and should) happen for any group with multiple children
 					-- local msg = "SpawnGroups(%s): Halting recursion, parent=%s already exists!"
-					-- addon:Debug(msg:format(childId, groupId))
+					-- addon:DEBUG(msg, childId, groupId)
 				end
 				
 				-- only apply settings if this is the first time this child has been added
 				if AddChild(parentGroup, child, position) then
                     if _DEBUG_GROUPS then
-                        addon:Debug(("%s> :|cff999999AddChild|r(): adding child id '%s' to parent '%s'"):format(_DEBUG_GROUPS_PREFIX, tostring(childId), groupId))
+                        addon:DEBUG("%s> :|cff999999AddChild|r(): adding child id '%s' to parent '%s'", _DEBUG_GROUPS_PREFIX, tostring(childId), groupId)
                     end
                     
-					--addon:Debug(">> Group: Add successful!!")
+					--addon:DEBUG(">> Group: Add successful!!")
 					HandleDynamicSettings(child, parentGroup, groupOptions, true)
 					-- resize the parent based on its children's positioning
 					ResizeParent(parentGroup)
@@ -603,7 +603,7 @@ local function DestroyGroup(groupId)
 		DisplayGroup[groupId] = nil
 		
 		if _DEBUG_GROUPS then
-			addon:Debug(("%s> :|cff999999DestroyGroup|r(%s)"):format(_DEBUG_GROUPS_PREFIX, groupId))
+			addon:DEBUG("%s> :|cff999999DestroyGroup|r(%s)", _DEBUG_GROUPS_PREFIX, groupId)
 		end
 	end
 end
@@ -631,7 +631,7 @@ end
 local function DespawnGroups(childId, child, visited)
     visited = visited or {}
     if AlreadyVisited(visited, childId) then
-        addon:Debug(("DespawnGroups(%s): Cyclic reference detected! (%s)"):format(childId, concat(visited, "->")))
+        addon:DEBUG("DespawnGroups(%s): Cyclic reference detected! (%s)", childId, concat(visited, "->"))
         return
     end
     append(visited, childId)
@@ -644,7 +644,7 @@ local function DespawnGroups(childId, child, visited)
 				-- the display may not have been part of a group
 				if parentGroup and parentGroup.children.byChild[child] then
 					if _DEBUG_GROUPS then
-						addon:Debug(("%s> |cff999999RemoveChild|r(%s): parent.numChildren=|cffFF00FF%s|r"):format(_DEBUG_GROUPS_PREFIX, tostring(childId), parentGroup.numChildren - 1))
+						addon:DEBUG("%s> |cff999999RemoveChild|r(%s): parent.numChildren=|cffFF00FF%s|r", _DEBUG_GROUPS_PREFIX, tostring(childId), parentGroup.numChildren - 1)
 					end
 					
 					HandleDynamicSettings(child, parentGroup, groupOptions)
@@ -674,12 +674,12 @@ end
 -- from a group perspective, this is no different than _CREATE/_DELETE
 -- ------------------------------------------------------------------
 DisplayGroup[MESSAGES.DISPLAY_SHOW] = function(self, msg, spellCD, display)
-	addon:PrintFunction(("Group -> showing %s"):format(tostring(spellCD)))
+	addon:FUNCTION("Group -> showing %s", tostring(spellCD))
 	SpawnGroups(spellCD.spellid, display)
 end
 
 DisplayGroup[MESSAGES.DISPLAY_HIDE] = function(self, msg, spellCD, display)
-	addon:PrintFunction(("Group -> hiding %s"):format(tostring(spellCD)))
+	addon:FUNCTION("Group -> hiding %s", tostring(spellCD))
 	DespawnGroups(spellCD.spellid, display)
 end
 

@@ -171,7 +171,7 @@ Replace[ESC.NAMES_MOST_RECENT_ACTIVE] = function(display, fontString, triggerSpe
 			-- UNLESS the spell has multiple charges and the person used those charges within the buff duration
 			--		eg, Healbot casts salv -> +2s -> Healbot casts salv (again)
 			local msg = "[TEXT] %s expired -> showing %s as active (%.6fs remaining)"
-			addon:Error(msg:format(tostring(triggerSpell), tostring(mostRecent), (mostRecent:BuffExpirationTime() - GetTime())))
+			addon:ERROR(msg, tostring(triggerSpell), tostring(mostRecent), (mostRecent:BuffExpirationTime() - GetTime()))
 			allowPrint = nil
 		end
 	
@@ -364,12 +364,12 @@ CMP['='] = CMP['==']
 
 local function DebugParsing(msg)
 	if _DEBUG_PARSING then
-		addon:Debug(msg)
+		addon:DEBUG(msg)
 	end
 end
 
 local function ParseText(display, fontString, triggerSpell)
-	local text = fontString.rawText
+	local text = fontString.db.value
 	if text then
 		-- regex-fu
 		local regex = "[.]*(%%%a)[^%%]*%%{%s*[iI][fF]%s*([<>=][=]?)%s*(%d+)%s*,%s*([%%]?[<>!-/%[-%`|~%w]*)%s*}[.]*"
@@ -443,7 +443,7 @@ local function ParseText(display, fontString, triggerSpell)
 				-- this shouldn't happen
 				-- it indicates that the regex is matching too much (matched an unexpected comparator)
 				local msg = "ParseText('%s') - failed to locate compare function for '%s' (first='%s', cond='%s', second='%s')"
-				addon:Debug(msg:format(fontString.rawText, compare, first, condition, second))
+				addon:DEBUG(msg, fontString.db.value, compare, first, condition, second)
 			end
 			
 			DebugParsing(("=> '%s'"):format(parsed))
@@ -471,12 +471,12 @@ local function ParseText(display, fontString, triggerSpell)
 						text = text:gsub(esc, parsed)
 					else
 						local msg = "[%s] Parsing encountered a problem. '%s' -> %s"
-						addon:Warn(msg:format(tostring(triggerSpell), escSeq, tostring(parsed)))
+						addon:WARN(msg, tostring(triggerSpell), escSeq, tostring(parsed))
 					end
 				else
 					-- warn
 					local msg = "Bad escape sequence '%s' found while parsing text for %s: '%s'"
-					addon:Warn(escSeq, tostring(triggerSpell), fontString.rawText)
+					addon:WARN(escSeq, tostring(triggerSpell), fontString.db.value)
 				end
 			end
 		end
@@ -527,10 +527,40 @@ function Texts:Shutdown()
     self:UnregisterMessage(MSG.OPT_TEXTS_UPDATE)
 end
 
-local ApplySettings(fontString, spellCD)
-    -- TODO: what to look up? how to even do this?
-    --      ..could tag the db entry that this fontString represents (eg: fontString.db = textData)
-    --      ..but would that work on profile swaps?
+local function ApplySettings(fontString, spellCD)
+	local spellid = spellCD.spellid
+    local textData = fontString.db
+    
+    local useClassColor = addon.db:LookupFont(textData, spellid, "useClassColor")
+    local fontR, fontG, fontB
+    local font = addon.db:LookupFont(textData, spellid, "font")
+    local fontSize = addon.db:LookupFont(textData, spellid, "size")
+    local fontFlags = addon.db:LookupFont(textData, spellid, "flags")
+    local justifyH = addon.db:LookupFont(textData, spellid, "justifyH")
+    local justifyV = addon.db:LookupFont(textData, spellid, "justifyV")
+    
+    -- TODO: TMP
+    fontString.useClassColor = useClassColor
+    --
+    
+    if useClassColor then
+        -- may not make much sense for consolidated displays (will use the spellCD that spawned the display's class color)
+        fontR, fontG, fontB = GUIDClassColorRGB(spellCD.guid)
+    else
+        fontR = addon.db:LookupFont(textData, spellid, "r")
+        fontG = addon.db:LookupFont(textData, spellid, "g")
+        fontB = addon.db:LookupFont(textData, spellid, "b")
+    end
+    fontString:ClearAllPoints()
+    fontString:SetPoint(textData.point, fontString:GetParent(), textData.relPoint, textData.x, textData.y)
+    fontString:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, font), fontSize, fontFlags) -- will not set the size > 24
+    fontString:SetTextHeight(fontSize) -- this will scale the drawn text if > 24
+    fontString:SetJustifyH(justifyH)
+    fontString:SetJustifyV(justifyV)
+    fontString:SetTextColor(fontR, fontG, fontB, 1)
+    local sa = addon.db:LookupFont(textData, spellid, "shadow") and 1 or 0
+    fontString:SetShadowColor(0, 0, 0, sa)
+    fontString:SetShadowOffset(1, -1)
 end
 
 local TEXT_ELEMENT_KEY = consts.TEXT_ELEMENT_KEY
@@ -551,27 +581,10 @@ local function GetTexts(spellCD, parent)
 			local textData = db.texts[i]
 			if textData.enabled and textData.value then -- don't create a fontstring for disabled texts or if no value is supplied (an empty fontstring)
 				textCluster = textCluster or {}
-			
-				local useClassColor = addon.db:LookupFont(textData, spellid, "useClassColor")
-				local fontR, fontG, fontB
-				local font = addon.db:LookupFont(textData, spellid, "font")
-				local fontSize = addon.db:LookupFont(textData, spellid, "size")
-				local fontFlags = addon.db:LookupFont(textData, spellid, "flags")
-				local justifyH = addon.db:LookupFont(textData, spellid, "justifyH")
-				local justifyV = addon.db:LookupFont(textData, spellid, "justifyV")
-				
-				if useClassColor then
-					-- may not make much sense for consolidated displays (will use the spellCD that spawned the display's class color)
-					fontR, fontG, fontB = GUIDClassColorRGB(spellCD.guid)
-				else
-					fontR = addon.db:LookupFont(textData, spellid, "r")
-					fontG = addon.db:LookupFont(textData, spellid, "g")
-					fontB = addon.db:LookupFont(textData, spellid, "b")
-				end
 				
 				local textElement = parent[TEXT_ELEMENT_KEY:format(i)]
 				if not textElement then
-					--addon:Debug(("%s: creating fontstring.. '|cff999999%s|r'"):format(tostring(spellCD), textData.value))
+					--addon:DEBUG("%s: creating fontstring.. '|cff999999%s|r'", tostring(spellCD), textData.value)
 					
 					-- instantiate a new fontstring
 					-- it doesn't seem like fontstrings can be passed around and recycled (unless they're given a global name?)
@@ -581,23 +594,10 @@ local function GetTexts(spellCD, parent)
 					textElement:SetDrawLayer("OVERLAY", 7)
 					parent[TEXT_ELEMENT_KEY:format(i)] = textElement
 				end
-				textElement:ClearAllPoints()
-				textElement:SetPoint(textData.point, parent, textData.relPoint, textData.x, textData.y)
-				textElement:SetFont(LSM:Fetch(MEDIA_TYPES.FONT, font), fontSize, fontFlags) -- will not set the size > 24
-                textElement:SetTextHeight(fontSize) -- this will scale the drawn text if > 24
-				textElement:SetJustifyH(justifyH)
-				textElement:SetJustifyV(justifyV)
-				textElement:SetTextColor(fontR, fontG, fontB, 1)
-				local sa = addon.db:LookupFont(textData, spellid, "shadow") and 1 or 0
-				textElement:SetShadowColor(0, 0, 0, sa)
-                textElement:SetShadowOffset(1, -1)
-				
-				-- cache some data on the fontstring so it does not have to be looked up again
-				textElement.groupText = textData.groupText
-				textElement.rawText = textData.value
-				textElement.useClassColor = useClassColor
+                textElement.db = textData -- cache the db entry on the fontstring
+                ApplySettings(textElement, spellCD)
 				ParseAndSetText(parent, textElement, spellCD)
-				
+                
 				append(textCluster, textElement)
 				textElement:Show()
 			end
@@ -605,7 +605,7 @@ local function GetTexts(spellCD, parent)
 		return textCluster
 	else
 		local msg = "Could not instantiate text instances for key=%s - no data!"
-		addon:Debug(msg:format(tostring(spellid)))
+		addon:DEBUG(msg, tostring(spellid))
 	end
 end
 
@@ -623,7 +623,7 @@ end
 -- OnCreate
 -- ------------------------------------------------------------------
 Texts[MSG.DISPLAY_CREATE] = function(self, msg, spellCD, display)
-	--addon:PrintFunction(("Texts:%s(%s)"):format(msg, tostring(spellCD)))
+	--addon:FUNCTION("Texts:%s(%s)", msg, tostring(spellCD))
 		
 	local textCluster = self[display]
 	if not textCluster then
@@ -646,7 +646,7 @@ local toRemove = {}
 Texts[MSG.DISPLAY_DELETE] = function(self, msg, spellCD, display)
 	local textCluster = self[display]
 	if textCluster then
-		--addon:PrintFunction(("Texts:%s(%s)"):format(msg, tostring(spellCD)))
+		--addon:FUNCTION("Texts:%s(%s)", msg, tostring(spellCD))
 		
 		while #textCluster > 0 do
 			local fontString = remove(textCluster)
@@ -656,9 +656,8 @@ Texts[MSG.DISPLAY_DELETE] = function(self, msg, spellCD, display)
 			fontString:Hide()
 			fontString:ClearAllPoints()
 			fontString:SetText("")
-			fontString.groupText = nil
-			fontString.rawText = nil
-			fontString.useClassColor = nil
+            -- TODO? restore color?
+            fontString.db = nil
 		end
 		self[display] = nil
 	end
@@ -728,7 +727,7 @@ local function TextGUIDStateHandler(self, msg, guid)
 						 -- this should never happen (and if it does, it would be better to catch it in core)
 						 -- indicates a mismatch between the 'Cooldowns' and 'CooldownsByGUID' tables
 						 local msg = "Texts:%s(%s): Cooldown state mismatch! No such spell='%s' tracked for 'guid'"
-						 addon:Debug(msg:format(msg, GUIDClassColoredName(guid), tostring(id)))
+						 addon:DEBUG(msg, msg, GUIDClassColoredName(guid), tostring(id))
 					end
 				end
 			end
@@ -797,7 +796,7 @@ local function OnEnter(msg, widget, motion)
 				local stickiedText = Texts[sticky]
 				for i = 1, #stickiedText do
 					local fontString = stickiedText[i]
-					if fontString.groupText then
+					if fontString.db.groupText then
 						fontString:Hide()
 					end
 				end
@@ -805,7 +804,7 @@ local function OnEnter(msg, widget, motion)
 			for i = 1, #textCluster do
 				-- show the texts relevant to the mouse-over
 				local fontString = textCluster[i]
-				if fontString.groupText then
+				if fontString.db.groupText then
 					fontString:Show()
 				end
 			end
@@ -822,7 +821,7 @@ local function OnLeave(msg, widget, motion)
 			for i = 1, #textCluster do
 				-- hide the texts which were shown from mouse-over
 				local fontString = textCluster[i]
-				if fontString.groupText then
+				if fontString.db.groupText then
 					fontString:Hide()
 				end
 			end
@@ -831,7 +830,7 @@ local function OnLeave(msg, widget, motion)
 				local stickiedText = Texts[sticky]
 				for i = 1, #stickiedText do
 					local fontString = stickiedText[i]
-					if fontString.groupText then
+					if fontString.db.groupText then
 						fontString:Show()
 					end
 				end
@@ -862,7 +861,7 @@ Texts[MSG.DISPLAY_GROUP_ADD] = function(self, msg, child, group)
 		local broadcastBehaviorChange = false
 		for i = 1, #textCluster do
 			local fontString = textCluster[i]
-			if fontString:IsVisible() and fontString.groupText then
+			if fontString:IsVisible() and fontString.db.groupText then
 				fontString:Hide()
 				CacheOriginalPoint(fontString)
 				-- set new point based on group settings
@@ -892,7 +891,7 @@ Texts[MSG.DISPLAY_GROUP_REMOVE] = function(self, msg, child, group)
 		local broadcastBehaviorChange = false
 		for i = 1, #textCluster do
 			local fontString = textCluster[i]
-			if fontString.groupText then
+			if fontString.db.groupText then
 				fontString:Show()
 				RestoreOriginalPoint(fontString)
 				broadcastBehaviorChange = true
@@ -922,8 +921,9 @@ Texts[MSG.OPT_TEXTS_UPDATE] = function(self, msg, id)
                 for i = 1, #textCluster do
                     local fontString = textCluster[i]
                     ApplySettings(fontString, spellCD)
-                    -- TODO: 
+                    -- TODO: text delete, text create, profile changes (just delete all and repopulate?)
                 end
+                Reparse(spellCD, display)
             end
         end
     else
@@ -932,11 +932,15 @@ Texts[MSG.OPT_TEXTS_UPDATE] = function(self, msg, id)
 		for display, textCluster in next, self do
             if IsTextCluster(display, textCluster) then
                 for spellCD in next, display.spells do
-                    local consolidatedId = addon.db:GetConsolidatedKey(spellCD.sp
+                    local consolidatedId = addon.db:GetConsolidatedKey(spellCD.spellid)
+                    if id == spellCD.spellid or id == consolidatedId then
                         for i = 1, #textCluster do
                             local fontString = textCluster[i]
                             ApplySettings(fontString, spellCD)
+                            -- TODO
                         end
+                        Reparse(spellCD, display)
+                        
                         applied = true
                         break
                     end
@@ -947,8 +951,8 @@ Texts[MSG.OPT_TEXTS_UPDATE] = function(self, msg, id)
         end
         
         if not applied then
-            local debugMsg = "Icons:%s: No such icon for id='%s'"
-            addon:Debug(debugMsg:format(msg, id))
+            local debugMsg = "Texts:%s: No such icon for id='%s'"
+            addon:DEBUG(debugMsg, msg, id)
         end
     end
 end

@@ -241,7 +241,7 @@ Bars[LCB_STOP_MSG] = function(self, msg, bar)
 		
 		if idx then
 			if _DEBUG_BARS then
-				addon:Debug(("%s> Handling bar:Stop() for %s"):format(_DEBUG_BARS_PREFIX, tostring(spellCD)))
+				addon:DEBUG("%s> Handling bar:Stop() for %s", _DEBUG_BARS_PREFIX, tostring(spellCD))
 			end
 		
 			remove(Bars[display], idx)
@@ -291,16 +291,16 @@ Bars[LCB_STOP_MSG] = function(self, msg, bar)
 			end
 		else
 			if _DEBUG_BARS then
-				addon:Debug(("%s> FAILED TO HANDLE :Stop(%s) - Could not find index!"):format(_DEBUG_BARS_PREFIX, tostring(spellCD)))
+				addon:DEBUG("%s> FAILED TO HANDLE :Stop(%s) - Could not find index!", _DEBUG_BARS_PREFIX, tostring(spellCD))
 				if Bars[display] then
-					addon:Debug("-- Bars for this display:")
+					addon:DEBUG("-- Bars for this display:")
 					for i = 1, #Bars[display] do
 						local bar = Bars[display][i]
 						if bar.currentSpellCD then
-							addon:Debug(("   >%s"):format(tostring(bar.currentSpellCD)))
+							addon:DEBUG("   >%s", tostring(bar.currentSpellCD))
 						end
 					end
-					addon:Debug("--======================")
+					addon:DEBUG("--======================")
 				end
 			end
 		end
@@ -401,7 +401,7 @@ local function OnBarUpdate(bar)
 		-- TODO: text emphasis (size/color) - smooth gradient & (or?) snap to size/color
 	else
 		local msg = "OnBarUpdate(%s) - bar is missing cached spell.."
-		addon:Error(msg:format(tostring(spellCD))) -- TODO: change to :Debug
+		addon:ERROR(msg, tostring(spellCD)) -- TODO: change to :DEBUG
 		
 		-- kill this onUpdate func to avoid spamming further
 		-- TODO? TMP?
@@ -552,7 +552,7 @@ local function GetBar(spellCD, display)
 	if db.bar.limit > 0 and numBarsRunning + 1 > db.bar.limit then
 		-- spawning a new bar would exceed the alotted number of concurrent bars
 		if _DEBUG_BARS then
-			addon:Debug(("%s> GetBar(%s): No empty bar slot!"):format(_DEBUG_BARS_PREFIX, tostring(spellCD)))
+			addon:DEBUG("%s> GetBar(%s): No empty bar slot!", _DEBUG_BARS_PREFIX, tostring(spellCD))
 		end
 		return nil
 	end
@@ -652,8 +652,9 @@ local function StartBar(bar, spellCD, display, duration, expire, posIdx)
 	bar.exp = expire
 	
 	if _DEBUG_BARS then
+        local numBarsRunning = GetNumBarsRunning(display)
 		posIdx = posIdx or numBarsRunning
-		addon:Debug(("StartBar(%s): duration=%s, pos=%s, #running=%s"):format(tostring(spellCD), duration, posIdx, numBarsRunning))
+		addon:DEBUG("StartBar(%s): duration=%s, pos=%s, #running=%s", tostring(spellCD), duration, posIdx, numBarsRunning)
 	end
 end
 
@@ -687,7 +688,7 @@ local function StartBuffDurationCountdown(spellCD, display)
 		if buffExpire > now then
 			-- need to show a buff duration
 			if _DEBUG_BARS then
-				addon:Debug(("%s> StartBuffDurationCountdown(%s)"):format(_DEBUG_BARS_PREFIX, tostring(spellCD)))
+				addon:DEBUG("%s> StartBuffDurationCountdown(%s)", _DEBUG_BARS_PREFIX, tostring(spellCD))
 			end
 			
 			local bar = FindBar(spellCD, display)
@@ -735,7 +736,7 @@ local function StartBuffDurationCountdown(spellCD, display)
 			elseif _DEBUG_BARS then
 				-- this should never happen
 				local msg = "%s> |cffFF0000FAILED|r to start a buff bar for %s!"
-				addon:Error(msg:format(_DEBUG_BARS_PREFIX, tostring(spellCD))) -- TODO: change to :Debug
+				addon:ERROR(msg, _DEBUG_BARS_PREFIX, tostring(spellCD)) -- TODO: change to :DEBUG
 			end
 		end
 	end
@@ -771,7 +772,7 @@ Bars[MESSAGES.DISPLAY_BUFF_EXPIRE] = function(self, msg, spellCD, display)
 			-- trust what core says over whatever display happens to be doing
 			-- (core says the buff is expired, so update the display to reflect)
 			if _DEBUG_BARS then
-				addon:Warn(("Bars[|cff999999EXPIRE|r](%s): |cffFF0000Bar found|r! Stopping.. (%.6fs remaining)"):format(tostring(spellCD), bar.remaining))
+				addon:WARN("Bars[|cff999999EXPIRE|r](%s): |cffFF0000Bar found|r! Stopping.. (%.6fs remaining)", tostring(spellCD), bar.remaining)
 			end
 			bar:Stop()
 		end
@@ -781,7 +782,7 @@ Bars[MESSAGES.DISPLAY_BUFF_EXPIRE] = function(self, msg, spellCD, display)
 		local spell = addon:GetMostRecentBuffCastSpell(display)
 		if spell then
 			if _DEBUG_BARS then
-				addon:Warn(("Bars[|cff999999EXPIRE|r](%s): mostRecent=%s"):format(tostring(spellCD), tostring(spell)))
+				addon:WARN("Bars[|cff999999EXPIRE|r](%s): mostRecent=%s", tostring(spellCD), tostring(spell))
 			end
 
 			local mostRecentBar = FindBar(spell, display)
@@ -789,7 +790,7 @@ Bars[MESSAGES.DISPLAY_BUFF_EXPIRE] = function(self, msg, spellCD, display)
 				-- a bar is already displayed for the spell about to be shown..
                 -- this can happen if the current bar overrode the spellCD whose buff just expired
 				local msg = "%s> Attempting to start another buff bar for %s.."
-				addon:Error(msg:format(_DEBUG_BARS_PREFIX, tostring(spell))) -- TODO: change to :Debug
+				addon:ERROR(msg, _DEBUG_BARS_PREFIX, tostring(spell)) -- TODO: change to :DEBUG
 			end
 			
 			-- boot up another buff duration bar (show an overridden buff bar that is still ticking)
@@ -797,7 +798,7 @@ Bars[MESSAGES.DISPLAY_BUFF_EXPIRE] = function(self, msg, spellCD, display)
 		else
 			-- otherwise, show the first queued spell
 			if _DEBUG_BARS then
-				addon:Warn(("Bars[|cff999999EXPIRE|r](%s): starting first queued.."):format(tostring(spellCD)))
+				addon:WARN("Bars[|cff999999EXPIRE|r](%s): starting first queued..", tostring(spellCD))
 			end
 			StartNextCooldown(display)
 		end
@@ -808,7 +809,7 @@ end
 -- OnUse
 -- ------------------------------------------------------------------
 Bars[MESSAGES.DISPLAY_USE] = function(self, msg, spellCD, display)
-    addon:Print(msg..": "..tostring(spellCD))
+    addon:PRINT("%s: %s", msg, tostring(spellCD))
     -- try to start a buff duration bar
     if not StartBuffDurationCountdown(spellCD, display) then
         -- try to start a cooldown bar for this spellCD use
@@ -884,7 +885,7 @@ Bars[MESSAGES.OPT_BARS_UPDATE] = function(self, msg, id)
                 for i = 1, #displayBars do
                     local bar = displayBars[i]
                     ApplySettings(bar, spellCD)
-                    -- TODO: .limit, .shown, .cooldown, .showBuffDuration
+                    -- TODO: .limit, .shown, .cooldown, .showBuffDuration, positioning/sizing (ie: 'SetPosition')
                 end
             end
         end
@@ -912,7 +913,7 @@ Bars[MESSAGES.OPT_BARS_UPDATE] = function(self, msg, id)
         
         if not applied then
             local debugMsg = "Icons:%s: No such icon for id='%s'"
-            addon:Debug(debugMsg:format(msg, id))
+            addon:DEBUG(debugMsg, msg, id)
         end
     end
 end

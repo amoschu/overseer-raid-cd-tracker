@@ -29,8 +29,8 @@ local LEVEL = {
 }
 local LEVEL_BY_VAL = {}
 do
-	for k, val in next, LEVEL do
-		LEVEL_BY_VAL[val] = k
+	for lvl, val in next, LEVEL do
+		LEVEL_BY_VAL[val] = lvl
 	end
 end
 
@@ -47,19 +47,108 @@ local LEVEL_PREFIX = {
 	[LEVEL.CRITICAL] = " |cffFF00FFCritical|r",
 }
 
-local currentLevel 
-do
-	-- TOC file changes are (seemingly) only read when client is loaded
-	local level = GetAddOnMetadata(ME, "X-Overseer-Log-Level")
-	currentLevel = LEVEL[level] or LEVEL.INFO
+local function Print(level, message, ...)
+    -- what is the difference between DEFAULT_CHAT_FRAME:AddMessage and print?
+    local formattedMsg = message:format(...)
+    print( ("|c%s%s|r%s: %s"):format(NAME_COLOR, ME, LEVEL_PREFIX[level] or "", tostring(formattedMsg)) )
 end
 
-local function Print(level, message)
-	-- filter out messages under current level threshold
-	if level >= currentLevel then
-		-- what is the difference between DEFAULT_CHAT_FRAME:AddMessage and print?
-		print( ("|c%s%s|r%s: %s"):format(NAME_COLOR, ME, LEVEL_PREFIX[level] or "", tostring(message)) )
+local function NoOp() end
+
+-- ------------------------------------------------------------------
+-- Logging wrappers
+-- ------------------------------------------------------------------
+
+ --[[
+    globally accessible print methods are stored at the addon-table level
+    the function names match the keys of the LEVEL table
+    eg, addon:PRINT(...) or addon:CLEU(...), etc
+--]]
+local PRINT_WRAPPER = {}
+do
+    for lvl, val in next, LEVEL do
+        -- propogate generic wrapper methods
+        -- eg, PRINT_WRAPPER:CLEU(msg, ...)
+        PRINT_WRAPPER[lvl] = function(self, message, ...)
+            Print(val, message, ...)
+        end
+        
+        -- map the print methods to their wrappers
+        addon[lvl] = PRINT_WRAPPER[lvl]
+    end
+    
+    -- override some specific functionality
+    
+    PRINT_WRAPPER.FUNCTION = function(self, force, message, ...)
+        if type(force) == "string" then
+            PRINT_WRAPPER.FUNCTION(self, nil, force, message, ...)
+        else
+            -- this can be a bit spammy and not super duper useful in combat so..
+            if force or not addon.isFightingBoss then
+                Print(LEVEL.FUNCTION, message, ...)
+            end
+        end
+    end
+    addon.FUNCTION = PRINT_WRAPPER.FUNCTION
+    
+    PRINT_WRAPPER.PRINT = function(self, force, message, ...)
+        if type(force) == "string" then
+            PRINT_WRAPPER.PRINT(self, nil, force, message, ...)
+        else
+            Print(force and inf or LEVEL.PRINT, message, ...)
+        end
+    end
+    addon.PRINT = PRINT_WRAPPER.PRINT
+    
+    PRINT_WRAPPER.CRITICAL = function(self, message, level, ...)
+        Print(LEVEL.CRITICAL, message, ...)
+        error(message:format(...), tonumber(level) or 2)
+    end
+    addon.CRITICAL = PRINT_WRAPPER.CRITICAL
+end
+
+-- ------------------------------------------------------------------
+-- Current logging level
+-- ------------------------------------------------------------------
+
+local currentLevel -- current output level
+local levelNames = ""
+local function SetLevel(level)
+	if not level then
+		level = LEVEL.INFO
+	elseif type(level) == "string" then
+		level = LEVEL[level]
 	end
+	
+	if type(level) ~= "number" then
+		if levelNames:len() == 0 then
+			for k in next, LEVEL do
+				local levelName = ("|cff00FF00%s|r"):format(k)
+				levelNames = levelNames:len() > 0 and ("%s, %s"):format(levelName, levelNames) or levelName
+			end
+		end
+		
+		msg = "Failed to set output level, defaulting to DEBUG. Usage: :SetOutputLevel(level) - level = {%s}"
+		addon:DEBUG(msg:format(levelNames))
+	end
+	
+	currentLevel = level or LEVEL.DEBUG
+    -- re-map the print methods to either print or no op
+    -- eg, addon:DEBUG(...), etc
+    for lvl, val in next, LEVEL do
+        addon[lvl] = (val >= currentLevel) and PRINT_WRAPPER[lvl] or NoOp
+    end
+end
+
+function addon:SetOutputLevel(level)
+    SetLevel(level)
+	self:PRINT(true, "Output level set to %s=%d", LEVEL_BY_VAL[currentLevel], currentLevel)
+end
+
+do -- set the initial output level
+	-- TOC file changes are (seemingly) only read when client is loaded
+	local level = GetAddOnMetadata(ME, "X-Overseer-Log-Level")
+    SetLevel(LEVEL[level])
 end
 
 -- ------------------------------------------------------------------
@@ -109,33 +198,6 @@ function addon:UpdateClassColors()
 end
 
 -- ------------------------------------------------------------------
--- Current logging level
--- ------------------------------------------------------------------
-local levelNames = ""
-function addon:SetOutputLevel(level)
-	if not level then
-		level = LEVEL.INFO
-	elseif type(level) == "string" then
-		level = LEVEL[level]
-	end
-	
-	if type(level) ~= "number" then
-		if levelNames:len() == 0 then
-			for k in next, LEVEL do
-				local levelName = ("|cff00FF00%s|r"):format(k)
-				levelNames = levelNames:len() > 0 and ("%s, %s"):format(levelName, levelNames) or levelName
-			end
-		end
-		
-		msg = "Failed to set output level, defaulting to DEBUG. Usage: :SetOutputLevel(level) - level = {%s}"
-		self:Debug(msg:format(levelNames))
-	end
-	
-	currentLevel = level or LEVEL.DEBUG
-	self:Print(("Output level set to %s=%d"):format(LEVEL_BY_VAL[currentLevel], currentLevel), true)
-end
-
--- ------------------------------------------------------------------
 -- Public util functions 
 -- note the '.', no implicit 'self' arg - this allows us to alias these functions without needing to pass 'addon'
 -- eg. local UnitClassColoredName = addon.UnitClassColoredName
@@ -144,7 +206,7 @@ end
 function addon.TableAppend(array, value) -- this is actually the same as table.insert(t, value).. woops
 	if type(array) ~= "table" then
 		local msg = "Failed to append \"%s\" to non-table type (type=%s)"
-		addon:Debug(msg:format(tostring(value), type(array)))
+		addon:DEBUG(msg, tostring(value), type(array))
 		return
 	end
 	
@@ -180,9 +242,9 @@ function addon.UnitHasFilter(unit, filter)
 		if _DEBUG_UNIT_HAS_FILTER then
 			local classFilters = filtersByClass[class]
 			if classFilters then
-				addon:Debug("filtersByClass["..class.."]: testing '"..filter.."' -> "..tostring(hasFilter))
+				addon:DEBUG("filtersByClass["..class.."]: testing '"..filter.."' -> "..tostring(hasFilter))
 				for k,v in pairs(classFilters) do
-					addon:Debug("    "..k..":"..tostring(v))
+					addon:DEBUG("    "..k..":"..tostring(v))
 				end
 			end
 		end
@@ -213,7 +275,7 @@ function addon.UnitNeedsInspect(unit)
 						result = events:match(INSPECT_EVENT) and true
 					else
 						local msg = "UnitNeedsInspect(%s) - encountered unexpected type, '%s', in 'eventsByFilter' table"
-						addon:Debug(msg:format(addon.UnitClassColoredName(unit), type(events)))
+						addon:DEBUG(msg, addon.UnitClassColoredName(unit), type(events))
 					end
 				end
 				
@@ -248,7 +310,7 @@ function addon.UnitClassColoredName(unit, stripRealm)
 	if type(unit) ~= "string" then
 		--[[
 		local msg = "UnitClassColoredName(unit[, stripRealm]) - expected string 'unit', received '%s'"
-		addon:Debug(msg:format(type(unit)))
+		addon:DEBUG(msg, type(unit))
 		--]]
 		return GetClassColoredName(nil, UNKNOWN)
 	end
@@ -266,7 +328,7 @@ end
 function addon.GUIDClassColoredName(guid, stripRealm)
 	if type(guid) ~= "string" then
 		--[[
-		addon:Debug("GUIDClassColoredName(guid[, stripRealm]) - expected string 'guid'")
+		addon:DEBUG("GUIDClassColoredName(guid[, stripRealm]) - expected string 'guid'")
 		--]]
 		return GetClassColoredName(nil, UNKNOWN)
 	end
@@ -289,7 +351,7 @@ end
 function addon.GUIDName(guid, stripRealm)
 	if type(guid) ~= "string" then
 		--[[
-		addon:Debug("GUIDClassColoredName(guid[, stripRealm]) - expected string 'guid'")
+		addon:DEBUG("GUIDClassColoredName(guid[, stripRealm]) - expected string 'guid'")
 		--]]
 		return GetClassColoredName(nil, UNKNOWN)
 	end
@@ -308,51 +370,17 @@ function addon.GUIDName(guid, stripRealm)
 	return name
 end
 
--- ------------------------------------------------------------------
--- Logging wrappers
--- ------------------------------------------------------------------
-function addon:PrintCLEU(message)
-	Print(LEVEL.CLEU, message)
-end
-
-function addon:PrintTracking(message)
-	Print(LEVEL.TRACKING, message)
-end
-
-function addon:PrintCD(message)
-	Print(LEVEL.COOLDOWN, message)
-end
-
-function addon:PrintFunction(message, force)
-	-- this can be a bit spammy and not super duper useful in combat so..
-	if force or not self.isFightingBoss then
-		Print(LEVEL.FUNCTION, message)
-	end
-end
-
-function addon:Print(message, force)
-	Print(force and inf or LEVEL.PRINT, message)
-end
-
-function addon:Debug(message)
-	Print(LEVEL.DEBUG, message)
-end
-
-function addon:Info(message)
-	Print(LEVEL.INFO, message)
-end
-
-function addon:Warn(message)
-	Print(LEVEL.WARN, message)
-end
-
-function addon:Error(message)
-	Print(LEVEL.ERROR, message)
-end
-
-function addon:Critical(message, level)
-	Print(LEVEL.CRITICAL, message)
-	error(message, tonumber(level) or 2)
+function addon.GetGUIDType(guid)
+    if (guid) ~= "string" then
+        return
+    end
+    
+    -- 6.0 GUIDs are of the form [UnitType]:[more:stuff:...]
+    --  eg. players => Player:971:000F5773
+    --      pets =>    Pet:0:971:1:67:510:020009EA4B
+    -- http://wowpedia.org/Patch_6.0.2/API_changes#Changes
+    local i = guid:find(":")
+    return i and guid:sub(1, i-1)
 end
 
 --@do-not-package@
@@ -371,7 +399,7 @@ function addon:DebugItemsFor(unit)
 	if type(unit) == "string" then
 		local guid = UnitGUID(unit)
 		if type(guid) == "string" then
-			self:Print( ("%s items:"):format(GUIDClassColoredName(guid)), true )
+			self:PRINT(true, "%s items:", GUIDClassColoredName(guid))
 			
 			local atLeastOne = 0
 			for i = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
@@ -382,18 +410,18 @@ function addon:DebugItemsFor(unit)
 					-- regex string from reforgelite
 					-- upgrades are mapped to arbitrary(?) numbers
 					local id, upgrade = itemLink:match("item:(%d+):%d+:%d+:%d+:%d+:%d+:%-?%d+:%-?%d+:%d+:%d+:(%d+)")
-					self:Print( ("%s%s (upgrade: %s)"):format(indent:rep(2), tostring(id), tostring(upgrade)), true )
-					self:Print( ("%s%s"):format(indent, itemLink), true )
+					self:PRINT(true, "%s%s (upgrade: %s)", indent:rep(2), tostring(id), tostring(upgrade))
+					self:PRINT(true, "%s%s", indent, itemLink)
 					atLeastOne = atLeastOne + 1
 				end
 			end
 			
-			self:Print( ("%s#items = %s"):format(indent, atLeastOne == 0 and "<NONE>" or tostring(atLeastOne)), true)
+			self:PRINT(true, "%s#items = %s", indent, atLeastOne == 0 and "<NONE>" or tostring(atLeastOne))
 		else
-			self:Print( (":DebugItemsFor(\"%s\") - could not get guid for unit"):format(tostring(unit)), true )
+			self:PRINT(true, ":DebugItemsFor(\"%s\") - could not get guid for unit", tostring(unit))
 		end
 	else
-		self:Print( (":DebugItemsFor(\"%s\") - bad unit argument"):format(tostring(unit)), true )
+		self:PRINT(true, ":DebugItemsFor(\"%s\") - bad unit argument", tostring(unit))
 	end
 end
 
@@ -405,21 +433,21 @@ function addon:DebugCooldownsFor(unit)
 	if type(unit) == "string" then
 		local guid = UnitGUID(unit)
 		if type(guid) == "string" then
-			self:Print( ("%s tracked cooldowns:"):format(GUIDClassColoredName(guid)), true )
+			self:PRINT(true, "%s tracked cooldowns:", GUIDClassColoredName(guid))
 		
 			local guidCooldowns = self.Cooldowns:GetSpellIdsFor(guid)
 			if guidCooldowns then
 				for spellid in next, guidCooldowns do
-					self:Print( ("%s%s (%s)"):format(indent, tostring(spellid), GetSpellInfo(spellid) or "???"), true )
+					self:PRINT(true, "%s%s (%s)", indent, tostring(spellid), GetSpellInfo(spellid) or "???")
 				end
 			else
-				self:Print( ("%s<NONE>"):format(indent), true )
+				self:PRINT(true, "%s<NONE>", indent)
 			end
 		else
-			self:Print( (":DebugCooldownsFor(\"%s\") - could not get guid for unit"):format(tostring(unit)), true )
+			self:PRINT(true, ":DebugCooldownsFor(\"%s\") - could not get guid for unit", tostring(unit))
 		end
 	else
-		self:Print( (":DebugCooldownsFor(\"%s\") - bad unit argument"):format(tostring(unit)), true )
+		self:PRINT(true, ":DebugCooldownsFor(\"%s\") - bad unit argument", tostring(unit))
 	end
 end
 --@end-do-not-package@

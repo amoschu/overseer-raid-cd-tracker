@@ -33,7 +33,7 @@ local function SuperShittySnapToNearestImplementation()
 				local dx = x2 - x
 				local dy = y2 - y
 				if dx*dx + dy*dy <= MIN_SNAP_DIST*MIN_SNAP_DIST then
-					-- addon:Print("dx="..dx..", dy="..dy)
+					-- addon:PRINT("dx="..dx..", dy="..dy)
 					-- local w2, h2 = movable:GetSize()
 					-- local distX = dx - (0.5*w2 - 0.5*w) --(x2 - 0.5*w2) - (x - 0.5*w)
 					-- local distY = dy - (0.5*h2 - 0.5*h) --(y2 - 0.5*h2) - (y - 0.5*h)
