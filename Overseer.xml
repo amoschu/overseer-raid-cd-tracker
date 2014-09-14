@@ -21,6 +21,7 @@
 	<Script file="core\CooldownDefaults.lua"/>
 	<Script file="core\SlashCmd.lua"/>
 	<Script file="core\Profiling.lua"/>
+    <Script file="core\Tests.lua"/>
 	
 	<Script file="display\MovingSizing.lua"/>
 	<Script file="display\elements\ElementBase.lua"/>

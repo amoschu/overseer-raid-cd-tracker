@@ -179,11 +179,11 @@ function Cooldowns:Remove(guid, spellid)
 end
 	
 -- resets all resettable cooldowns (ie, cds >= 5m)
-function Cooldowns:ResetCooldowns()
+function Cooldowns:ResetCooldowns(force)
 	for spellid, spells in next, self do
 		if type(spells) == "table" then -- skip these functions
 			for guid, cd in next, spells do
-				cd:Reset()
+				cd:Reset(force)
 			end
 		end
 	end
@@ -392,6 +392,7 @@ function SpellCooldown:Shutdown()
 	if latencyTimer then
 		addon:FUNCTION(">> stopping |cff999999latency cache|r timer")
 		addon:CancelTimer(latencyTimer)
+        latencyTimer = nil
 	end
 	StopUpdateTimer()
 end
@@ -644,7 +645,7 @@ function SpellCooldown:Use(offset, chargesOnCD)
 			GroupCache:SetState(self.guid)
 		end
 	end
-	
+    
 	if self:NumReady() > 0 then
 		-- adjust the active charge counter
 		self.chargesOnCD = chargesOnCD or (self.chargesOnCD + 1)
@@ -678,10 +679,10 @@ local DOES_RESET = {
 	[123904] = true, -- xuen
 }
 local MIN_DURATION_FOR_RESET = 5 * 60 -- minumum cooldown duration in seconds for a cooldown to reset (on encounter end)
-function SpellCooldown:Reset()
-	if DOES_NOT_RESET[self.spellid] then return end
+function SpellCooldown:Reset(force)
+	if not force and DOES_NOT_RESET[self.spellid] then return end
 
-	if self.duration >= MIN_DURATION_FOR_RESET or DOES_RESET[self.spellid] then
+	if force or self.duration >= MIN_DURATION_FOR_RESET or DOES_RESET[self.spellid] then
         ResetCooldown(self)
 	end
 end

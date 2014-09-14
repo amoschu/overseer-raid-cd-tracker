@@ -26,6 +26,7 @@ local LEVEL = {
 	WARN 	 = 30,
 	ERROR 	 = 40,
 	CRITICAL = 100,
+    TEST     = 1000,
 }
 local LEVEL_BY_VAL = {}
 do
@@ -45,6 +46,7 @@ local LEVEL_PREFIX = {
 	[LEVEL.WARN] 	 = " |cffFFA500Warning|r",
 	[LEVEL.ERROR] 	 = " |cffFF0000Error|r",
 	[LEVEL.CRITICAL] = " |cffFF00FFCritical|r",
+    [LEVEL.TEST]     = " |cff229ED3Test|r --",
 }
 
 local function Print(level, message, ...)

@@ -49,6 +49,15 @@ local spellidsByClass = {
 	--]]
 }
 
+local classBySpellid = {
+    --[[
+    {
+        [spellid] = class,
+        ...
+    }
+    --]]
+}
+
 local buffSpellIdsByClass = {
 	--[[
 	cache of buff spellids per class
@@ -416,6 +425,7 @@ local function CacheClassData(spellid, class, cooldownData, modData)
 	-- cache the spellid for quicker lookups
 	spellidsByClass[class] = spellidsByClass[class] or {}
 	spellidsByClass[class][spellid] = true
+    classBySpellid[spellid] = class
 end
 
 local indent = consts.INDENT
@@ -555,6 +565,10 @@ for all data belonging to this class
 --]]
 function addon:GetClassSpellIdsFromData(class)
 	return class and spellidsByClass[class]
+end
+
+function addon:GetSpellIdClass(spellid)
+    return spellid and classBySpellid[spellid]
 end
 
 --[[
