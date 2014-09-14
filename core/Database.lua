@@ -75,7 +75,7 @@ do -- setup default table
 			shown = true,
 			desatIfUnusable = true, -- TODO: give these more options desat on.. 'X'
 			showBuffDuration = true,
-			cooldown = false, -- show cooldown sweep
+			cooldown = true, -- show cooldown sweep
 			autoCrop = true, -- try to set the texCoords based on current icon dimension
 			width = 32,
 			height = 20,
