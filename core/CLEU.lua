@@ -160,9 +160,6 @@ cleu["UNIT_DIED"] = -- handle deaths
 	function(spellid, spellname, srcInGroup, destInGroup, srcGUID, srcName, destGUID, destName)
 		if destGUID == nil then return end -- may happen if pet despawns
 		
-		-- http://wowpedia.org/API_UnitGUID
-		-- x % 8 has the same effect as x & 0x7 for x <= 0xf
-		-- this magic math masks the unit type out of the guid
 		local unitType = GetGUIDType(destGUID)
 		if unitType == PLAYER and destInGroup then
 			local isSOR = UnitBuff(destName, SpiritOfRedemption)
