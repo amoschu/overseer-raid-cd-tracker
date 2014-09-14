@@ -841,26 +841,35 @@ Bars[MESSAGES.BREZ_CHARGING] = function(self, msg, brezCount, brezRechargeStart,
 						if display.spells[spellCD] then
                             local db = addon.db:GetDisplaySettings(spellCD.spellid)
                             if db.bar.cooldown then
-                                local bar = FindBar(spellCD, display) -- TODO: what if there are multiple bars? can that even happen?
-                                
-                                bar.brezCharging = true -- flag that this bar is representing a charging brez
-                                bar.fill = false
-                                
-                                -- positioning
-                                bar:SetParent(display)
-                                bar:ClearAllPoints()
-                                SetPosition(bar, display)
-                                
-                                bar:SetDuration(brezRechargeDuration)
-                                bar:Start()
-                                -- manually adjust the bar to fake as though it were always running
-                                -- (in case this bar is starting midway through its duration)
-                                -- TODO: is this needed?
-                                local now = GetTime()
-                                local expire = brezRechargeStart + brezRechargeDuration
-                                local remaining = expire - now
-                                bar.start = bar.fill and expire - brezRechargeDuration or remaining
-                                bar.exp = expire
+                                -- TODO: what if there are multiple bars?
+                                local bar = FindBar(spellCD, display) or GetBar(spellCD, display)
+                                if bar then
+                                    bar.brezCharging = true -- flag that this bar is representing a charging brez
+                                    bar.fill = false
+                                    
+                                    -- positioning
+                                    bar:SetParent(display)
+                                    bar:ClearAllPoints()
+                                    SetPosition(bar, display)
+                                    
+                                    bar:SetDuration(brezRechargeDuration)
+                                    bar:Start()
+                                    -- manually adjust the bar to fake as though it were always running
+                                    -- (in case this bar is starting midway through its duration)
+                                    -- TODO: is this needed?
+                                    local now = GetTime()
+                                    local expire = brezRechargeStart + brezRechargeDuration
+                                    local remaining = expire - now
+                                    bar.start = bar.fill and expire - brezRechargeDuration or remaining
+                                    bar.exp = expire
+                                --[[
+                                else
+                                    -- this is not actually an error - the display may represent multiple spells
+                                    -- so, bar==nil means the display is currently showing a different
+                                    -- eg, multiple brez spells -> display shows only one
+                                    addon:ERROR("Could not find nor create bar for %s", tostring(spellCD))
+                                --]]
+                                end
                             end
 							break
 						end

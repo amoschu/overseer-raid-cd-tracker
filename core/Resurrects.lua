@@ -62,7 +62,6 @@ local dead = {
 
 local deadCount = 0
 local brezCount = 0 -- the current remaining number of combat resses
-local brezRechargeStart = 0 -- the start of the current charge's timer (from GetTime())
 local brezRechargeTimer = nil
 
 -- ------------------------------------------------------------------
@@ -91,25 +90,32 @@ local BROADCAST_BREZ = { -- TODO: TMP
     [16] = true, -- mythic (heroic)
     -- [17] = true, -- LFR
 }
-local function NextChargeTime()
-    local timeLeftSec = addon:TimeLeft(brezRechargeTimer)
-    if timeLeftSec > 0 then
-        return SecondsToString(timeLeftSec)
-    else
-        addon:DEBUG("NextChargeTime(): brezRechargeTimer is invalid!")
-        return "??s"
-    end
-end
 --
 
 local function GetRechargeTimeSec()
     return 60 * 90 / addon.instanceGroupSize
 end
 
+local function NextChargeTime() -- TODO: TMP
+    local timeLeftSec = addon:TimeLeft(brezRechargeTimer)
+    if timeLeftSec > 0 then
+        return SecondsToString(timeLeftSec)
+    else
+        -- invalid timer _should_ mean a res charge was just gained
+        -- so, next charge should be avail at the max recharge time
+        return SecondsToString(GetRechargeTimeSec())
+    end
+end
+--
+
 local function SaveBrezInfo(saveNextRecharge)
     addon:SaveBrezState(brezCount, saveNextRecharge and (time() + GetRechargeTimeSec()))
 end
 
+local resMsg = {
+    "%s came back to life!",
+    "%d resurrect%s remaining (next charge in %s)",
+}
 local function AcceptBrezFor(guid)
     brezCount = brezCount - 1
     SaveBrezInfo()
@@ -132,14 +138,14 @@ local function AcceptBrezFor(guid)
 		-- TODO: TMP
 		local difficulty = GetRaidDifficultyID() or 0
 		if BROADCAST_BREZ[difficulty] then
-			SendChatMessage(("%s came back to life!"):format(GUIDName(guid)), BROADCAST_TYPE)
-            SendChatMessage(("%d resurrect%s remaining (next charge in %s)"):format(brezCount, brezCount == 1 and "" or "s", NextChargeTime()), BROADCAST_TYPE)
+			SendChatMessage(resMsg[1]:format(GUIDName(guid)), BROADCAST_TYPE)
+            SendChatMessage(resMsg[2]:format(brezCount, brezCount == 1 and "" or "s", NextChargeTime()), BROADCAST_TYPE)
 		end
 		--
         addon:SendMessage(MESSAGES.BREZ_ACCEPT, brezCount, guid, rezzers[guid])
-		
-		addon:PRINT("AcceptBrezFor(): %s came back to life! (%d remaining)", GUIDClassColoredName(guid), brezCount)
-		addon:PRINT(rezSrcMsg, numUsed, rezSrc)
+
+        addon:PRINT(resMsg[1], GUIDName(guid))
+        addon:PRINT(resMsg[2], brezCount, brezCount == 1 and "" or "s", NextChargeTime())
 		if brezCount == 0 then
 			addon:SendMessage(MESSAGES.BREZ_OUT, brezCount)
 		end
@@ -271,17 +277,18 @@ local function OutOfCombatResScan()
 	end
 end
 
+local nextAvailMsg = "%d resurrect%s available (next charge in %s)"
 local function BrezRecharge(scheduleRepeating)
     brezCount = brezCount + 1
     SaveBrezInfo(true)
-    brezRechargeStart = GetTime()
-    addon:SendMessage(MESSAGES.BREZ_RECHARGED, brezCount)
+    addon:SendMessage(MESSAGES.BREZ_RECHARGED, brezCount, GetTime(), GetRechargeTimeSec())
     
     -- TODO: TMP
     local difficulty = GetRaidDifficultyID() or 0
     if BROADCAST_BREZ[difficulty] then
-        SendChatMessage(("%d ressurect%s available (next charge in %s)"):format(brezCount, brezCount == 1 and "" or "s", NextChargeTime()), BROADCAST_TYPE)
+        SendChatMessage(nextAvailMsg:format(brezCount, brezCount == 1 and "" or "s", NextChargeTime()), BROADCAST_TYPE)
     end
+    addon:PRINT(nextAvailMsg, brezCount, brezCount == 1 and "" or "s", NextChargeTime())
     --
     
     if scheduleRepeating then
@@ -391,6 +398,7 @@ function addon:EnableBrezScan()
         - charges decrement only if brez is accepted
         TODO: what if someone leaves mid-fight? does the regen rate update dynamically or is it set only at the beginning of the fight?
     --]]
+    local brezRechargeStart
     local lastCount, nextRecharge = addon:GetSavedBrezState()
     Cooldowns:ResetBrezCooldowns()
     brezCount = lastCount or 1
@@ -421,6 +429,7 @@ function addon:DisableBrezScan()
 	ClearAllDeadAndPending()
 	self:PauseBrezScan()
     self:CancelTimer(brezRechargeTimer)
+    brezRechargeTimer = nil
     self:WipeSavedBrezState()
 	-- stop watching the CLEU events relevant to combat rezzes
 	self:UnsubscribeCLEUEvent("SPELL_AURA_APPLIED")

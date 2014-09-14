@@ -708,7 +708,9 @@ local function TextBrezHandler(self)
 end
 Texts[MSG.BREZ_ACCEPT]    = TextBrezHandler
 Texts[MSG.BREZ_RESET]     = TextBrezHandler
+Texts[MSG.BREZ_CHARGING]  = TextBrezHandler
 Texts[MSG.BREZ_RECHARGED] = TextBrezHandler
+Texts[MSG.BREZ_STOP_CHARGING] = TextBrezHandler -- TODO: is this necessary?
 
 -- ------------------------------------------------------------------
 -- GUID State handling

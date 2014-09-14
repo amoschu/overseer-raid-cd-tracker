@@ -482,6 +482,7 @@ end
 Icons[MESSAGES.BREZ_RESET] = Icons[MESSAGES.BREZ_OUT]
 
 Icons[MESSAGES.BREZ_CHARGING] = function(self, msg, brezCount, brezRechargeStart, brezRechargeDuration)
+    addon:PRINT("%s: #brez=%s, rechargeStart=%s, rechargeDur=%s", tostring(msg), brezCount, brezRechargeStart, brezRechargeDuration)
 	for display, icon in next, self do
 		if IsIcon(display, icon) then
 			for id in next, BREZ_IDS do
