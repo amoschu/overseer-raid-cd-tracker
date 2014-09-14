@@ -865,7 +865,7 @@ Bars[MESSAGES.BREZ_CHARGING] = function(self, msg, brezCount, brezRechargeStart,
                                 --[[
                                 else
                                     -- this is not actually an error - the display may represent multiple spells
-                                    -- so, bar==nil means the display is currently showing a different
+                                    -- so, bar==nil means the display is currently showing a different spell
                                     -- eg, multiple brez spells -> display shows only one
                                     addon:ERROR("Could not find nor create bar for %s", tostring(spellCD))
                                 --]]
