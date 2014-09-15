@@ -244,7 +244,7 @@ function addon:OnDisable()
 	
 	self:ClearAllInspects()
 	self.GroupCache:Wipe()
-	self.Cooldowns:Wipe()
+	self.Cooldowns:Wipe(true)
 	self.SpellDisplay:Shutdown()
 	
 	-- fake a LOG_OUT to ensure the saved state is cleaned up properly

@@ -1,8 +1,8 @@
 
-local select, wipe, remove, concat
-	= select, wipe, table.remove, table.concat
-local GetAddOnInfo, IsAddOnLoaded, InCombatLockdown, UnitAffectingCombat, LoadAddOn, SendChatMessage
-	= GetAddOnInfo, IsAddOnLoaded, InCombatLockdown, UnitAffectingCombat, LoadAddOn, SendChatMessage
+local select, wipe, type, tonumber, tostring, remove, concat
+	= select, wipe, type, tonumber, tostring, table.remove, table.concat
+local GetSpellInfo, GetAddOnInfo, IsAddOnLoaded, InCombatLockdown, UnitAffectingCombat, LoadAddOn, SendChatMessage
+	= GetSpellInfo, GetAddOnInfo, IsAddOnLoaded, InCombatLockdown, UnitAffectingCombat, LoadAddOn, SendChatMessage
 	
 local addon = Overseer
 
@@ -140,6 +140,7 @@ commands["help"] = function(args)
 	end
 end
 
+-- TODO: REMOVE? this is kind of pointless?
 local CHANNELS = {
 	["s"] = "SAY",
 	["say"] = "SAY",
@@ -184,6 +185,7 @@ commands["brez"] = function(args)
 		addon:PRINT(true, msg, slash1)
 	end
 end
+--
 
 commands["unlock"] = function(args)
 	if args then
@@ -239,6 +241,9 @@ do -- build the valid cmd list (don't include the short aliases)
 	end
 end
 
+--[[
+    Usage: /os d i/g/c/s [unit/key]
+--]]
 commands["debug"] = function(args)
 	if args then
 		local badCmdOrArg
@@ -266,8 +271,99 @@ commands["debug"] = function(args)
 end
 commands["d"] = commands["debug"]
 
+--[[
+    Usage: /os t b [boss] [groupSize]
+                test brez system
+                boss (true/false) - whether encounter is active
+                groupSize (number) - size of group to test with
+           /os t spellid [cast]
+                test a specific spell (or cast if already spawned)
+                cast (number) - cast delay (ommitting = no cast)
+           /os t remove spellid
+                removes a test spell
+           /os t reset [spellid]
+                reset cooldown on either a single or all spawned spells
+           /os t k
+                kill all tests
+--]]
+local brezTest
+local spawned = {
+    --[[
+    [spellid] = true,
+    ...
+    --]]
+}
+commands["test"] = function(args)
+    if args then
+        local badCmdOrArg
+        local cmd = args[1]
+        if cmd then
+            if cmd == "b" or cmd:match("^brez") then
+                -- brez
+                if not brezTest then
+                    brezTest = true
+                    addon.Testing:StartBrez(args[2], args[3])
+                else
+                    brezTest = nil
+                    addon.Testing:FinishBrez()
+                end
+            elseif tonumber(cmd) ~= nil then
+                -- spawn spell
+                cmd = tonumber(cmd)
+                local spell = GetSpellInfo(cmd)
+                if spell and spell:len() > 0 then
+                    local cast = tonumber(args[2])
+                    if spawned[cmd] then
+                        -- previously spawned, just try to cast
+                        addon.Testing:CastSpell(cmd, cast)
+                    elseif addon.Testing:SpawnSpell(cmd) then
+                        -- spawn successful
+                        spawned[cmd] = true
+                        if cast then
+                            addon.Testing:CastSpell(cmd, cast)
+                        end
+                    end
+                else
+                    local msg = "Invalid spellid, %d. Usage: %s test spellid"
+                    addon:WARN(msg, cmd, slash1)
+                end
+            elseif cmd == "rm" or cmd:match("^remove") then
+                -- remove spell
+                local spellid = tonumber(args[2])
+                local spell = spellid and GetSpellInfo(spellid)
+                if spell and spell:len() > 0 then
+                    addon.Testing:DestroySpell(spellid)
+                else
+                    local msg = "Invalid spellid, %s. Usage: %s test rm spellid"
+                    addon:WARN(msg, tostring(spellid), slash1)
+                end
+            elseif cmd == "r" or cmd:match("^reset") then
+                -- reset spell cd
+                addon.Testing:ResetSpell(tonumber(args[2]))
+            elseif cmd == "k" or cmd:match("^kill") then
+                -- kill
+                addon.Testing:FinishBrez()
+                addon.Testing:DestroySpell()
+            else
+                badCmdOrArg = true
+            end
+        else
+            badCmdOrArg = true
+        end
+		if badCmdOrArg then
+			addon:WARN("Usage: %s t brez [boss] [groupSize] - brez test", slash1)
+			addon:WARN("Usage: %s t spellid [cast] - spell test", slash1)
+			addon:WARN("Usage: %s t rm spellid - remove test spell", slash1)
+			addon:WARN("Usage: %s t r spellid - reset test spell cooldown", slash1)
+			addon:WARN("Usage: %s t k - kill all tests", slash1)
+		end
+    end
+end
+commands["t"] = commands["test"]
+
 -- TODO: TMP
 commands["e"] = function(args) addon:Enable() end
+commands["disable"] = function(args) addon:Disable() end
 
 -- shorter aliases
 commands["h"] = commands["help"]

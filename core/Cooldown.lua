@@ -239,7 +239,7 @@ function Cooldowns:Initialize()
 end
 	
 -- clears all tracking information
-function Cooldowns:Wipe()
+function Cooldowns:Wipe(shutdown)
 	-- doing wipe(Cooldowns) will destroy all these functions
 	-- so, let's avoid that
 	
@@ -252,7 +252,9 @@ function Cooldowns:Wipe()
 	wipe(CooldownsByGUID)
 	wipe(SortedCooldowns)
 	
-	SpellCooldown:Shutdown()
+    if shutdown then
+        SpellCooldown:Shutdown()
+    end
 end
 -- ------------------------------------------------------------------
 -- Debug
