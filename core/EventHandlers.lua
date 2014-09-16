@@ -134,6 +134,9 @@ function addon:ENCOUNTER_START(event, encounterID, encounterName, difficultyId, 
 	else
 		self:FUNCTION(true, "FAKE ENCOUNTER_START(): IsEncounterInProgress()? %s", tostring(IsEncounterInProgress()))
 	end
+    
+    -- cache the encounter name for logging
+    self.encounter = encounterName
 	
 	if IsEncounterInProgress() then
 		self:EngageBoss()
@@ -155,6 +158,7 @@ local function DisengageBoss(isWipe)
 	-- note: cannot check IsEncounterInProgress b/c the _END event is sometimes thrown before the api call yields false
 	if addon.isFightingBoss then
 		addon.isFightingBoss = nil
+        addon.encounter = nil
 		addon:DisableBrezScan()
 		addon.Cooldowns:ResetCooldowns()
 		addon:StartOoCResScan() -- will scan once if none dead

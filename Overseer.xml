@@ -4,6 +4,7 @@
     <!--@end-no-lib-strip@-->
 
 	<Script file="core\Init.lua"/>
+    <Script file="core\Logging.lua"/>
 	<Script file="core\Util.lua"/>
 	<Script file="core\Constants.lua"/>
 	<Script file="core\Database.lua"/>

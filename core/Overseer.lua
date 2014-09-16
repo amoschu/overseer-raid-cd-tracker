@@ -20,6 +20,7 @@ local SCAN_CLASS_INTERVAL = consts.SCAN_CLASS_INTERVAL
 -- Addon-level members
 -- ------------------------------------------------------------------
 addon.isFightingBoss = nil
+addon.encounter = nil
 addon.benchGroup = NUM_MAX_GROUPS + 1
 addon.instanceGroupSize = 1
 
@@ -117,6 +118,13 @@ local function HookRegistration(methodName)
 end
 
 function addon:OnInitialize()
+    --[[
+        TODO: fix recording even if we're never :Enable()d
+            ideally, allow print-to-chat through log system
+            but don't record into SV unless :Enable()d
+    --]]
+    self:InitializeLogging()
+    
 	self:FUNCTION(":OnInitialize")
 	
 	self:InitializeDefaultCooldowns()
@@ -139,6 +147,7 @@ function addon:OnInitialize()
 	HookRegistration("UnregisterAllBuckets")
 	
 	OverseerSavedState = OverseerSavedState or {}
+    OverseerLog = OverseerLog or {}
 	addon:RegisterEvent("PLAYER_LOGIN") -- in init to catch CUSTOM_CLASS_COLORS
 	addon:RegisterEvent("PLAYER_LOGOUT") -- state saving between sessions
 	

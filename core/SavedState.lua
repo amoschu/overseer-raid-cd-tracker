@@ -78,6 +78,7 @@ end
 
 function addon:PLAYER_LOGOUT(event)
 	PruneSavedState()
+    addon:SaveLoggingInfo()
 end
 
 -- ------------------------------------------------------------------

@@ -9,6 +9,6 @@
 
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## SavedVariables: OverseerDB, OverseerSavedState
+## SavedVariables: OverseerDB, OverseerSavedState, OverseerLog
 
 Overseer.xml
