@@ -840,9 +840,9 @@ Bars[MESSAGES.BREZ_CHARGING] = function(self, msg, brezCount, brezRechargeStart,
 					for _, spellCD in next, spellCooldowns do
 						if display.spells[spellCD] then
                             local db = addon.db:GetDisplaySettings(spellCD.spellid)
-                            if db.bar.cooldown then
+                            if db.bar.shown and db.bar.cooldown then
                                 -- TODO: what if there are multiple bars?
-                                local bar = FindBar(spellCD, display) or GetBar(spellCD, display)
+                                local bar = FindBar(spellCD, display) --or GetBar(spellCD, display)
                                 if bar then
                                     bar.brezCharging = true -- flag that this bar is representing a charging brez
                                     bar.fill = false

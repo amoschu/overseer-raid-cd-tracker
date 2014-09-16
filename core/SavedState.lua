@@ -257,10 +257,21 @@ function addon:WipeSavedBrezState()
     SavedState[BREZ_RECHARGE_TIME] = nil
 end
 
-function addon:SaveBrezState(brezCount, nextRecharge)
-    self:FUNCTION(":SaveBrezState(): brezCount=%s, lastRecharge=%s, rechargeDuration=%s", brezCount, lastRecharge, rechargeDuration)
+local function NoOp() end
+
+local function SaveBrezState(self, brezCount, nextRecharge)
+    self:FUNCTION(":SaveBrezState(): brezCount=%s, nextRecharge=%s", brezCount, nextRecharge)
     
     SavedState = SavedState or OverseerSavedState
     SavedState[BREZ_CURRENT] = brezCount
     SavedState[BREZ_RECHARGE_TIME] = nextRecharge or SavedState[BREZ_RECHARGE_TIME]
+end
+addon.SaveBrezState = SaveBrezState
+
+function addon:EnableBrezSaveState()
+    self.SaveBrezState = SaveBrezState
+end
+
+function addon:DisableBrezSaveState()
+    self.SaveBrezState = NoOp
 end

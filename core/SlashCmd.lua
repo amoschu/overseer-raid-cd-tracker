@@ -287,22 +287,18 @@ commands["d"] = commands["debug"]
                 kill all tests
 --]]
 local brezTest
-local spawned = {
-    --[[
-    [spellid] = true,
-    ...
-    --]]
-}
 commands["test"] = function(args)
     if args then
         local badCmdOrArg
         local cmd = args[1]
         if cmd then
+            if not addon:IsEnabled() then addon:Enable() end
+        
             if cmd == "b" or cmd:match("^brez") then
                 -- brez
                 if not brezTest then
                     brezTest = true
-                    addon.Testing:StartBrez(args[2], args[3])
+                    addon.Testing:StartBrez(args[2], tonumber(args[3]))
                 else
                     brezTest = nil
                     addon.Testing:FinishBrez()
@@ -312,13 +308,13 @@ commands["test"] = function(args)
                 cmd = tonumber(cmd)
                 local spell = GetSpellInfo(cmd)
                 if spell and spell:len() > 0 then
+                    local alreadySpawned = addon.Testing:SpawnSpell(cmd)
                     local cast = tonumber(args[2])
-                    if spawned[cmd] then
+                    if alreadySpawned == true then
                         -- previously spawned, just try to cast
                         addon.Testing:CastSpell(cmd, cast)
-                    elseif addon.Testing:SpawnSpell(cmd) then
+                    elseif alreadySpawned ~= false then
                         -- spawn successful
-                        spawned[cmd] = true
                         if cast then
                             addon.Testing:CastSpell(cmd, cast)
                         end

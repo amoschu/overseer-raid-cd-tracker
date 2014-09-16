@@ -40,34 +40,46 @@ Testing.Spawned = Spawned
 
 local function CastSpell(spellCD)
     addon:TEST("Casting %s", tostring(spellCD))
-    local spellid = spellCD.spellid
-    local spellname = GetSpellInfo(spellCD.spellid)
-    addon:UNIT_SPELLCAST_SUCCEEDED(nil, "player", spellname, _, _, spellid)
-    -- TODO: skip save state
+    spellCD:Use(0) -- passing 0 should skip saving the state
+end
+
+local function GetSpellCD(spellid, guid)
+    return Cooldowns[spellid] and Cooldowns[spellid][guid]
 end
 
 function Testing:CastSpell(spellid, cast)
+    local playerGUID = addon.playerGUID
     if Spawned[spellid] then
-        local spellCD = Cooldowns[spellid] and Cooldowns[spellid][addon.playerGUID]
+        local spellCD = GetSpellCD(spellid, playerGUID)
         if spellCD then
             if type(cast) == "number" then
+                addon:TEST("Casting %s in %s...", tostring(spellCD), SecondsToString(cast))
                 addon:ScheduleTimer(CastSpell, cast, spellCD)
             else
                 CastSpell(spellCD)
             end
         end
+    elseif GetSpellCD(spellid, playerGUID) then
+        addon:TEST("Attempted to cast non test-spawned spell, %s (%d)", GetSpellInfo(spellid), spellid)
+    else
+        addon:TEST("No such spell, %s (%d), to cast!", GetSpellInfo(spellid), spellid)
     end
 end
 
 function Testing:SpawnSpell(spellid)
     local playerGUID = addon.playerGUID
-    if Cooldowns[spellid] and Cooldowns[spellid][playerGUID] then
+    if GetSpellCD(spellid, playerGUID) then
         -- don't potentially squash a real spell with a test one
-        return
+        return Spawned[spellid] and true or false
     end
     
     local class = addon:GetSpellIdClass(spellid)
     local spellData = addon:GetCooldownDataFor(class, spellid)
+    if not spellData then
+        addon:TEST("Attempted to spawn spell with no data, %s (%d)", GetSpellInfo(spellid), spellid)
+        return
+    end
+    
     local cdDuration = spellData[filterKeys.CD]
     local charges = spellData[filterKeys.CHARGES]
     local buffDuration = spellData[filterKeys.BUFF_DURATION]
@@ -82,7 +94,7 @@ function Testing:SpawnSpell(spellid)
 end
 
 local function ResetSpell(spellid, guid)
-    local spellCD = Cooldowns[spellid] and Cooldowns[spellid][guid]
+    local spellCD = GetSpellCD(spellid, guid)
     if spellCD then
         addon:TEST("Resetting cooldown for %s", tostring(spellCD))
         spellCD:Reset(true)
@@ -98,12 +110,16 @@ function Testing:ResetSpell(spellid)
     else
         if Spawned[spellid] then
             ResetSpell(spellid, playerGUID)
+        elseif GetSpellCD(spellid, playerGUID) then
+            addon:TEST("Attempted to reset non test-spawned spell, %s (%d)", GetSpellInfo(spellid), spellid)
+        else
+            addon:TEST("No such spell, %s (%d), to reset!", GetSpellInfo(spellid), spellid)
         end
     end
 end
 
 local function DestroySpell(spellid, guid)
-    local spellCD = Cooldowns[spellid] and Cooldowns[spellid][guid]
+    local spellCD = GetSpellCD(spellid, guid)
     if spellCD then
         addon:TEST("Destroying %s...", tostring(spellCD))
         Cooldowns:Remove(guid, spellid)
@@ -120,89 +136,14 @@ function Testing:DestroySpell(spellid)
         end
         wipe(Spawned)
     else
-        if not Spawned[spellid] then
+        if Spawned[spellid] then
+            DestroySpell(spellid, playerGUID)
+        elseif GetSpellCD(spellid, playerGUID) then
             addon:TEST("Attempted to remove non test-spawned spell, %s (%d)", GetSpellInfo(spellid), spellid)
-            return
-        end
-        DestroySpell(spellid, playerGUID)
-    end
-end
-
--- ------------------------------------------------------------------
--- Spell testing mode - TODO: REMOVE?
--- ------------------------------------------------------------------
-local CachedCooldowns = {
-    --[[
-    copy of Cooldowns table before starting testing mode
-    --]]
-}
-
-local CopyTable(tbl, cpy)
-    cpy = cpy or {}
-    for k, v in next, tbl do
-        if type(v) == "table" then
-            cpy[k] = CopyTable(v)
         else
-            cpy[k] = v
+            addon:TEST("No such spell, %s (%d), to remove!", GetSpellInfo(spellid), spellid)
         end
     end
-    return cpy
-end
-
-local CacheCooldownState()
-    wipe(CachedCooldowns)
-    for spellid, spells in next, Cooldowns do
-        if type(spells) == "table" then
-            for guid, spellCD in next, spells do
-                CachedCooldowns[spellid] = CachedCooldowns[spellid] or {}
-                CachedCooldowns[spellid][guid] = CopyTable(spellCD)
-            end
-        end
-    end
-end
-
-function Testing:Start()
---[[ TODO: testing mode
-        - cache current state: Cooldowns, GroupCache?, SavedState? (more?)
-        - set bench group (need?)
-        - pause inspects
-        - delay all relevant events until testing mode finished
-            may need to stagger firing these delayed events
---]]
-
-    -- delay relevant events -> does this work? GetTime() won't be accurate..
-    --[[
-        -> what is this point of this?
-        how is this useful?
-        only practical use for spawning is to spawn a spell that does not currently have a display
-        (mostly for unlocking..)
-    --]]
-
-    -- cache the cooldown state
-    CacheCooldownState()
-    Cooldowns:Wipe()
-    
-    -- spawn some spells
-    addon:TEST("Spawning spells...")
-    for _, class in next, classes do
-        local ids = addon:GetClassSpellIdsFromData(class)
-        if type(ids) == "table" then
-            for spellid in next, ids do
-                if not self:SpawnSpell(spellid) then
-                    addon:TEST("> Failed to spawn %s (it already exists)", GetSpellInfo(spellid))
-                end
-            end
-        end
-    end
-    
-    -- start casting at random
-end
-
-function Testing:Finish()
---[[
-    - drop testing state
-    - pop cached state
---]]
 end
 
 -- ------------------------------------------------------------------
@@ -213,13 +154,15 @@ local function SpawnBrezSpells()
     addon:TEST("Spawning brez spells...")
     local spellToCast
     for spellid in next, BREZ_IDS do
-        spellToCast = Testing:SpawnSpell(spellid) or spellToCast
+        local spellCD = Testing:SpawnSpell(spellid)
+        spellToCast = type(spellCD) == "table" and spellCD or spellToCast
     end
     return spellToCast
 end
 
 local fakeBrezTimer
 local BREZ_RECHARGE_DURATION = 15
+local rechargeDuration = 1
 local function FakeBrezAccept()
     addon:TEST("brez test go!")
     local playerGUID = addon.playerGUID
@@ -232,7 +175,7 @@ local function FakeBrezAccept()
     addon:PauseBrezScan()
     
     -- schedule another in N seconds
-    local delay = random(1 + BREZ_RECHARGE_DURATION, 1.5 * BREZ_RECHARGE_DURATION)
+    local delay = random(1 + rechargeDuration, 1.5 * rechargeDuration)
     addon:TEST("Next brez test in %s", SecondsToString(delay))
     fakeBrezTimer = addon:ScheduleTimer(FakeBrezAccept, delay)
 end
@@ -252,19 +195,25 @@ function Testing:StartBrez(boss, groupSize)
         addon:ScheduleTimer(CastSpell, BREZ_CAST_DELAY, brezToCast)
         
         if boss or boss == nil then
+            addon:DisableBrezSaveState()
             -- fake instance group size
             cachedInstanceGroupSize = addon.instanceGroupSize
-            addon.instanceGroupSize = groupSize or GroupSizePerRecharge(BREZ_RECHARGE_DURATION)
+            rechargeDuration = groupSize and GroupSizePerRecharge(groupSize) or BREZ_RECHARGE_DURATION
+            addon.instanceGroupSize = groupSize or GroupSizePerRecharge(rechargeDuration)
+        
+            addon:TEST("Testing brez: groupSize=%d (recharge=%s)", addon.instanceGroupSize, SecondsToString(rechargeDuration))
+            
             -- fake an encounter
             wasFightingBoss = addon.isFightingBoss
             addon.isFightingBoss = true
             addon:EnableBrezScan()
-            addon:ScheduleTimer(FakeBrezAccept, BREZ_CAST_DELAY + 0.1)
+            fakeBrezTimer = addon:ScheduleTimer(FakeBrezAccept, BREZ_CAST_DELAY + 0.1)
         end
     end
 end
 
 function Testing:FinishBrez()
+    addon:DisableBrezScan()
     for spellid in next, BREZ_IDS do
         self:DestroySpell(spellid)
     end
@@ -275,6 +224,6 @@ function Testing:FinishBrez()
     if cachedInstanceGroupSize then
         addon.instanceGroupSize = cachedInstanceGroupSize
     end
-    -- TODO: revert to brez cached state
-    self:WipeSavedBrezState()
+    -- TODO: revert to brez cached state (just brezCount?)
+    addon:EnableBrezSaveState()
 end

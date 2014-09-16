@@ -662,6 +662,9 @@ function SpellCooldown:Use(offset, chargesOnCD)
 		KillCooldown(self)
 		addon:SendMessage(MESSAGES.CD_READY, self) -- this skips the normal _READY flow, so force a _READY broadcast
 		Use(self)
+    else
+        local msg = ":Use(%s): |c%s%s|r(%s) was casted with no charges ready!"
+        addon:DEBUG(msg, GUIDClassColoredName(self.guid), GUIDClassColorStr(self.guid), tostring(GetSpellInfo(self.spellid)), tostring(self.spellid))
 	end
 end
 
